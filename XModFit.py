@@ -333,9 +333,9 @@ class XModFit(QWidget):
         self.tApp_Client.start('python '+self.toolApps[tname])
 
     def aboutDialog(self):
-        QMessageBox.information(self,'About','Copyright NSF\'s ChemMAtCARS, 2020.\n\n'
+        QMessageBox.information(self,'About','Copyright (c) NSF\'s ChemMAtCARS, 2020.\n\n'
                                              'Developers:\n'
-                                             'Mrinal Bera (mrinalkb@cars.uchicago.edu \n'
+                                             'Mrinal K. Bera (mrinalkb@cars.uchicago.edu \n'
                                              'Wei Bu (bu@cars.uchicago.edu)\n',QMessageBox.Ok)
         
     def create_funcDock(self):
