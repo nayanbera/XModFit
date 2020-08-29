@@ -41,7 +41,7 @@ class Ellipsoid_Uniform: #Please put the class name same as the function name
         cbkg        : Constant incoherent background for cross-term
         abkg        : Constant incoherent background for Resonant-term
         flux        : Total X-ray flux to calculate the errorbar to simulate the errorbar for the fitted data
-        term        : 'SAXS-term' or 'Cross-term' or 'Resonant-term'
+        term        : 'SAXS-term' or 'Cross-term' or 'Resonant-term' or 'Total'
         D           : Hard Sphere Diameter
         phi         : Volume fraction of particles
         U           : The sticky-sphere interaction energy

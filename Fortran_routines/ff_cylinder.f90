@@ -66,7 +66,7 @@ subroutine ff_cylinder_dist(q,R,Rdist,L,Ldist,ff,M,N)
 end subroutine ff_cylinder_dist
 
 
-subroutine ff_cylinder_ML(q,rho,R,L,ff,ffamp,M, Nl)
+subroutine ff_cylinder_ml(q,rho,R,L,ff,ffamp,M, Nl)
     !***************************************************************************
     !Subroutine to calculate the form factor of Multilayered Cylinder
     !q = Array of reciprocal wave-vectors at which the form-factor needs to be calculated
@@ -104,4 +104,70 @@ subroutine ff_cylinder_ML(q,rho,R,L,ff,ffamp,M, Nl)
         ffamp(i) = ffamp(i)*pi/N
     enddo
 
-end subroutine ff_cylinder_ML
+end subroutine ff_cylinder_ml
+
+subroutine ff_cylinder_ml_asaxs(q,H,R,rho,eirho,adensity,Nalf,fft,ffs,ffc,ffr,M,Nlayers)
+    !***************************************************************************
+    !Subroutine to calculate the form factor of multilayered cylinder with disctribution of radii
+    !q = Array of reciprocal wave-vectors at which the form-factor needs to be calculated
+    !H = Height of the cylinder
+    !R = Array of half of the radii of the core and shells of the cylinder
+    !rho = Array of energy dependent electron densities  of core and the shells
+    !eirho = Array of energy indepdent electron densities of core and the shells
+    !adensity = Array of density of the resonant element in the particle
+    !Nlayers = Number of shells plus the core
+    !Nalf = Number of azimuthal angle to be integrated for isotropic integration
+    !fft = Total scattering from the ellipsoid particle
+    !ffs = SAXS-term
+    !ffc = Cross-term
+    !ffr = Resonant term
+    !M = No. of reciprocal wave-vectors at which the form-factor needs to be calculated
+    !Nlayers = No. of multilayers in the cylinder
+    !***************************************************************************
+    integer :: M, i, j, k, Nalf, Nlayers
+    double precision :: q(0:M-1)
+    double precision :: fft(0:M-1), ffs(0:M-1), ffc(0:M-1), ffr(0:M-1)
+    double precision :: R(0:Nlayers-1)
+    double complex :: rho(0:Nlayers-1)
+    double precision :: eirho(0:Nlayers-1), adensity(0:Nlayers-1)
+    double precision :: H, fs, fc, fr, tR, alf, dalf, V, fac
+    double complex :: ft, tft
+    double precision :: tfs, tfr
+    dalf=3.14159/float(Nalf)
+    do i = 0,M-1
+        fft(i)=0.0d0
+        ffs(i)=0.0d0
+        ffc(i)=0.0d0
+        ffr(i)=0.0d0
+        do j = 1, Nalf
+            alf=float(j)*dalf
+            tR=0.0d0
+            tft=0.0d0
+            tfs=0.0d0
+            tfr=0.0d0
+            do k = 0, Nlayers-2
+                tR=tR+R(k)
+                V=3.14159*tR**2*H
+                fac=(dsin(q(i)*H*dcos(alf)/2)/(q(i)*H*dcos(alf)/2) &
+                * bessel_j1(q(i)*tR*dsin(alf))/(q(i)*tR*dsin(alf)))
+                ft=2*V*(rho(k)-rho(k+1))*fac
+                fs=2*V*(eirho(k)-eirho(k+1))*fac
+                fr=2*V*(adensity(k)-adensity(k+1))*fac
+                fc=fs*fr
+                tft=tft+ft
+                tfs=tfs+fs
+                tfr=tfr+fr
+            end do
+            fft(i)=fft(i)+cdabs(tft)**2*dsin(alf)
+            ffs(i)=ffs(i)+tfs**2*dsin(alf)
+            ffc(i)=ffc(i)+tfs*tfr*dsin(alf)
+            ffr(i)=ffr(i)+tfr**2*dsin(alf)
+        end do
+
+        fft(i)=fft(i)*dalf
+        ffs(i)=ffs(i)*dalf
+        ffc(i)=ffc(i)*dalf
+        ffr(i)=ffr(i)*dalf
+    end do
+
+end subroutine ff_cylinder_ml_asaxs

@@ -83,15 +83,21 @@ end subroutine ff_ellipsoid_ml
 
 subroutine ff_ellipsoid_ml_asaxs(q,Rx,RzRatio,rho,eirho,adensity,Nalf,fft,ffs,ffc,ffr,M,Nlayers)
     !***************************************************************************
-    !Subroutine to calculate the form factor of sphere with disctribution of radii
+    !Subroutine to calculate the form factor of ellipsoid with disctribution of radii
     !q = Array of reciprocal wave-vectors at which the form-factor needs to be calculated
-    !R = Array of radius and shell thicknesses of sphere in Angstroms
-    !rho = Array of electron densities  of core and the shells
-    !Rdist = Probablity distribution of radii
+    !R = Array of half of the length of semi major axes shell thicknesses of ellipsoid in Angstroms
+    !RzRatio = Array of ratio between lengths of semi-minor axis to semi-major axis
+    !rho = Array of energy dependent electron densities  of core and the shells
+    !eirho = Array of energy indepdent electron densities of core and the shells
+    !adensity = Array of density of the resonant element in the particle
     !Nlayers = Number of shells plus the core
-    !aff = amplitude of form factor
-    !ff = Form factor of sphere
+    !Nalf = Number of azimuthal angle to be integrated for isotropic integration
+    !fft = Total scattering from the ellipsoid particle
+    !ffs = SAXS-term
+    !ffc = Cross-term
+    !ffr = Resonant term
     !M = No. of reciprocal wave-vectors at which the form-factor needs to be calculated
+    !Nlayers = No. of multilayers in the ellipsoid particles
     !***************************************************************************
     integer :: M, i, j, k, Nalf, Nlayers
     double precision :: q(0:M-1)

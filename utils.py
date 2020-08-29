@@ -116,6 +116,7 @@ def calc_rho(R=(1.0, 0.0), material=('Au', 'H2O'), relement='Au', density=(19.3,
                     f = cf.parse(m)
                     element_adjust = cf.elements()[-1]
                 solute_formula = cf.parse(solute)
+                fac=1.0
                 if relement in solute_formula.keys():
                     if element_adjust is not None:
                         cf.formula_dict[relement] = 0.0
