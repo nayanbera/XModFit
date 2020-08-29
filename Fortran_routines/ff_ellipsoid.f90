@@ -122,8 +122,9 @@ subroutine ff_ellipsoid_ml_asaxs(q,Rx,RzRatio,rho,eirho,adensity,Nalf,fft,ffs,ff
                 tRz=tRz+Rx(k)*RzRatio(k)
                 Rx2=tRx*tRx
                 Rz2=tRz*tRz
+                V=4*3.14159*tRz*tRx**2/3.0
                 rt=dsqrt(Rx2*dsin(alf)**2+Rz2*dcos(alf)**2)
-                fac=(dsin(q(i)*rt)-q(i)*rt*dcos(q(i)*rt))/(q(i)*rt)**3
+                fac=3*V*(dsin(q(i)*rt)-q(i)*rt*dcos(q(i)*rt))/(q(i)*rt)**3
                 ft=(rho(k)-rho(k+1))*fac
                 fs=(eirho(k)-eirho(k+1))*fac
                 fr=(adensity(k)-adensity(k+1))*fac
@@ -137,11 +138,11 @@ subroutine ff_ellipsoid_ml_asaxs(q,Rx,RzRatio,rho,eirho,adensity,Nalf,fft,ffs,ff
             ffc(i)=ffc(i)+tfs*tfr*dsin(alf)
             ffr(i)=ffr(i)+tfr**2*dsin(alf)
         end do
-        V=4*3.14159*tRz*tRx**2/3.0
-        fft(i)=(3*V)**2*fft(i)*dalf
-        ffs(i)=(3*V)**2*ffs(i)*dalf
-        ffc(i)=(3*V)**2*ffc(i)*dalf
-        ffr(i)=(3*V)**2*ffr(i)*dalf
+
+        fft(i)=fft(i)*dalf
+        ffs(i)=ffs(i)*dalf
+        ffc(i)=ffc(i)*dalf
+        ffr(i)=ffr(i)*dalf
     end do
 
 end subroutine ff_ellipsoid_ml_asaxs

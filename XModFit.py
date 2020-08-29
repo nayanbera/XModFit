@@ -589,7 +589,9 @@ class XModFit(QWidget):
             
     def openDataDialog(self,item):
         fnum,fname=item.text().split('<>')
+        self.dataListWidget.itemSelectionChanged.disconnect()
         data_dlg=Data_Dialog(data=self.dlg_data[item.text()],parent=self,expressions=self.expressions[item.text()],plotIndex=self.plotColIndex[item.text()],colors=self.plotColors[item.text()])
+        data_dlg.setModal(True)
         data_dlg.closePushButton.setText('Cancel')
         data_dlg.tabWidget.setCurrentIndex(1)
         data_dlg.dataFileLineEdit.setText(fname)
@@ -625,12 +627,14 @@ class XModFit(QWidget):
         #     self.pfnames=self.pfnames+[txt.split('<>')[0]+':'+key for key in self.data[txt].keys()]
         self.dataFileSelectionChanged()
         self.xChanged()
+        self.dataListWidget.itemSelectionChanged.connect(self.dataFileSelectionChanged)
         #self.update_plot()
 
     def xminmaxChanged(self):
         try:
             xmin,xmax=self.xminmaxLineEdit.text().split(':')
             self.xmin, self.xmax=float(xmin),float(xmax)
+            self.update_plot()
         except:
             QMessageBox.warning(self,"Value Error", "Please supply the Xrange in this format: xmin:xmax",QMessageBox.Ok)
     
@@ -791,7 +795,7 @@ class XModFit(QWidget):
                                                  self.fit.yerr[self.fit.imin:self.fit.imax + 1],
                                                  self.fit.yfit)).T
                             np.savetxt(ofname + '_fit.txt', fitdata, header=header, comments='#')
-                        self.xChanged()
+                        # self.xChanged()
                     else:
                         self.undoFit()
                 else:
@@ -880,10 +884,11 @@ class XModFit(QWidget):
         self.fitInfoDlg.done(0)
         
     def fitCallback(self,params,iterations,residual,fit_scale):
-        self.fitIterLabel.setText('Iteration=%d,\t Chi-Sqr=%.5e'%(iterations,np.sum(residual**2)))
+        # self.fitIterLabel.setText('Iteration=%d,\t Chi-Sqr=%.5e'%(iterations,np.sum(residual**2)))
         # if np.any(self.fit.yfit):
-        chisqr=np.sum(residual**2)/len(residual)
+        chisqr=np.sum(residual**2)
         if chisqr<self.tchisqr:
+            self.fitIterLabel.setText('Iteration=%d,\t Chi-Sqr=%.5e' % (iterations,chisqr))
             self.temp_params=copy.copy(params)
             if type(self.fit.x)==dict:
                 for key in self.fit.x.keys():
@@ -1028,6 +1033,7 @@ class XModFit(QWidget):
             for fname in fnames:
                 data_key=str(self.fileNumber)+'<>'+fname
                 data_dlg=Data_Dialog(fname=fname,parent=self)
+                data_dlg.setModal(True)
                 data_dlg.closePushButton.setText('Cancel')
                 if len(fnames)>1:
                     data_dlg.accept()
@@ -1599,111 +1605,115 @@ class XModFit(QWidget):
                 self.funcListWidget.itemSelectionChanged.disconnect()
             except:
                 pass
-            fh=open(fname,'r')
-            lines=fh.readlines()
-            category=lines[1].split(': ')[1].strip()
-            cat_item=self.categoryListWidget.findItems(category,Qt.MatchExactly)
-            self.categoryListWidget.setCurrentItem(cat_item[0])
-            self.funcListWidget.clearSelection()
-            func=lines[2].split(': ')[1].strip()
-            func_item=self.funcListWidget.findItems(func,Qt.MatchExactly)
-            self.funcListWidget.itemSelectionChanged.connect(self.functionChanged)
-            self.funcListWidget.setCurrentItem(func_item[0])
-            #self.fit.func.init_params()
-            if func==self.funcListWidget.currentItem().text():
-                lnum=3
-                sfline=None
-                mfline=None
-                for line in lines[3:]:
-                    if line=='#Fixed Parameters:\n':
-                        fline=lnum+2
-                    elif line=='#Single fitting parameters:\n':
-                        sfline=lnum+2
-                    elif line=='#Multiple fitting parameters:\n':
-                        mfline=lnum+2
-                    lnum+=1
-                if sfline is None:
-                    sendnum=lnum
-                else:
-                    sendnum=sfline-2
-                if mfline is None:
-                    mendnum=lnum
-                else:
-                    mendnum=mfline-2
-                for line in lines[fline:sendnum]:
-                    key,val=line.strip().split('\t')
+            try:
+                fh=open(fname,'r')
+                lines=fh.readlines()
+                category=lines[1].split(': ')[1].strip()
+                cat_item=self.categoryListWidget.findItems(category,Qt.MatchExactly)
+                self.categoryListWidget.setCurrentItem(cat_item[0])
+                self.funcListWidget.clearSelection()
+                func=lines[2].split(': ')[1].strip()
+                func_item=self.funcListWidget.findItems(func,Qt.MatchExactly)
+                self.funcListWidget.itemSelectionChanged.connect(self.functionChanged)
+                self.funcListWidget.setCurrentItem(func_item[0])
+                #self.fit.func.init_params()
+                if func==self.funcListWidget.currentItem().text():
+                    lnum=3
+                    sfline=None
+                    mfline=None
+                    for line in lines[3:]:
+                        if line=='#Fixed Parameters:\n':
+                            fline=lnum+2
+                        elif line=='#Single fitting parameters:\n':
+                            sfline=lnum+2
+                        elif line=='#Multiple fitting parameters:\n':
+                            mfline=lnum+2
+                        lnum+=1
+                    if sfline is None:
+                        sendnum=lnum
+                    else:
+                        sendnum=sfline-2
+                    if mfline is None:
+                        mendnum=lnum
+                    else:
+                        mendnum=mfline-2
+                    for line in lines[fline:sendnum]:
+                        key,val=line.strip().split('\t')
+                        try:
+                            val=eval(val.strip())
+                        except:
+                            val=val.strip()
+                        self.fit.params[key]=val
+                    if sfline is not None:
+                        for line in lines[sfline:mendnum]:
+                            parname,parval,parfit,parmin,parmax,parexpr,parbrute=line.strip().split('\t')
+                            self.fit.params[parname]=float(parval)
+                            self.fit.fit_params[parname].set(value=float(parval),vary=int(parfit),min=float(parmin),max=float(parmax))
+                            try:
+                                self.fit.fit_params[parname].set(expr=eval(parexpr))
+                            except:
+                                self.fit.fit_params[parname].set(expr=str(parexpr))
+                            try:
+                                self.fit.fit_params[parname].set(brute_step=eval(parbrute))
+                            except:
+                                self.fit.fit_params[parname].set(brute_step=str(parbrute))
+
+                    if mfline is not None:
+                        for line in lines[mfline:]:
+                            tlist=line.strip().split('\t')
+                            if len(tlist)>2:
+                                parname,parval,parfit,parmin,parmax,parexpr,parbrute=tlist
+                                try:
+                                    expr=eval(parexpr)
+                                except:
+                                    expr=str(parexpr)
+                                try:
+                                    brute_step=eval(parbrute)
+                                except:
+                                    brute_step=str(parbrute)
+                                try:
+                                    self.fit.fit_params.set(value=float(parval),vary=int(parfit),min=float(parmin),max=float(parmax),expr=expr,brute_step=brute_step)
+                                except:
+                                    self.fit.fit_params.add(parname,value=float(parval),vary=int(parfit),min=float(parmin),\
+                                                            max=float(parmax),expr=expr,brute_step=brute_step)
+                                mkey, pkey, num = parname[2:].split('_')
+                                num = int(num)
+                                try:
+                                    self.fit.params['__mpar__'][mkey][pkey][num] = float(parval)
+                                except:
+                                    self.fit.params['__mpar__'][mkey][pkey].insert(num, float(parval))
+                            else:
+                                parname,parval=tlist
+
+                                mkey,pkey,num=parname[2:].split('_')
+                                num=int(num)
+                                try:
+                                    self.fit.params['__mpar__'][mkey][pkey][num]=parval
+                                except:
+                                    self.fit.params['__mpar__'][mkey][pkey].insert(num,parval)
                     try:
-                        val=eval(val.strip())
+                        self.fixedParamTableWidget.cellChanged.disconnect()
+                        self.sfitParamTableWidget.cellChanged.disconnect()
+                        for i in range(self.mfitParamTabWidget.count()):
+                            mkey = self.mfitParamTabWidget.tabText(i)
+                            self.mfitParamTableWidget[mkey].cellChanged.disconnect()
                     except:
-                        val=val.strip()
-                    self.fit.params[key]=val
-                if sfline is not None:
-                    for line in lines[sfline:mendnum]:
-                        parname,parval,parfit,parmin,parmax,parexpr,parbrute=line.strip().split('\t')
-                        self.fit.params[parname]=float(parval)
-                        self.fit.fit_params[parname].set(value=float(parval),vary=int(parfit),min=float(parmin),max=float(parmax))
-                        try:
-                            self.fit.fit_params[parname].set(expr=eval(parexpr))
-                        except:
-                            self.fit.fit_params[parname].set(expr=str(parexpr))
-                        try:
-                            self.fit.fit_params[parname].set(brute_step=eval(parbrute))
-                        except:
-                            self.fit.fit_params[parname].set(brute_step=str(parbrute))
-
-                if mfline is not None:
-                    for line in lines[mfline:]:
-                        tlist=line.strip().split('\t')
-                        if len(tlist)>2:
-                            parname,parval,parfit,parmin,parmax,parexpr,parbrute=tlist
-                            try:
-                                expr=eval(parexpr)
-                            except:
-                                expr=str(parexpr)
-                            try:
-                                brute_step=eval(parbrute)
-                            except:
-                                brute_step=str(parbrute)
-                            try:
-                                self.fit.fit_params.set(value=float(parval),vary=int(parfit),min=float(parmin),max=float(parmax),expr=expr,brute_step=brute_step)
-                            except:
-                                self.fit.fit_params.add(parname,value=float(parval),vary=int(parfit),min=float(parmin),\
-                                                        max=float(parmax),expr=expr,brute_step=brute_step)
-                            mkey, pkey, num = parname[2:].split('_')
-                            num = int(num)
-                            try:
-                                self.fit.params['__mpar__'][mkey][pkey][num] = float(parval)
-                            except:
-                                self.fit.params['__mpar__'][mkey][pkey].insert(num, float(parval))
-                        else:
-                            parname,parval=tlist
-
-                            mkey,pkey,num=parname[2:].split('_')
-                            num=int(num)
-                            try:
-                                self.fit.params['__mpar__'][mkey][pkey][num]=parval
-                            except:
-                                self.fit.params['__mpar__'][mkey][pkey].insert(num,parval)
-                try:
-                    self.fixedParamTableWidget.cellChanged.disconnect()
-                    self.sfitParamTableWidget.cellChanged.disconnect()
+                        pass
+                    self.update_fixed_parameters()
+                    self.update_fit_parameters()
+                    self.fixedParamTableWidget.cellChanged.connect(self.fixedParamChanged)
+                    self.sfitParamTableWidget.cellChanged.connect(self.sfitParamChanged)
                     for i in range(self.mfitParamTabWidget.count()):
-                        mkey = self.mfitParamTabWidget.tabText(i)
-                        self.mfitParamTableWidget[mkey].cellChanged.disconnect()
-                except:
-                    pass
-                self.update_fixed_parameters()
-                self.update_fit_parameters()
-                self.fixedParamTableWidget.cellChanged.connect(self.fixedParamChanged)
-                self.sfitParamTableWidget.cellChanged.connect(self.sfitParamChanged)
-                for i in range(self.mfitParamTabWidget.count()):
-                    mkey=self.mfitParamTabWidget.tabText(i)
-                    self.mfitParamTableWidget[mkey].cellChanged.connect(self.mfitParamChanged_new)
-                self.update_plot()
-            else:
-                QMessageBox.warning(self,'File error','This parameter file does not belong to function: %s'% func,QMessageBox.Ok)
+                        mkey=self.mfitParamTabWidget.tabText(i)
+                        self.mfitParamTableWidget[mkey].cellChanged.connect(self.mfitParamChanged_new)
+                    self.update_plot()
+                else:
+                    QMessageBox.warning(self, 'File error',
+                                        'This parameter file does not belong to function: %s' % func, QMessageBox.Ok)
+            except:
+                QMessageBox.warning(self,'File Import Error','Some problems in the parameter file\n'+traceback.format_exc(), QMessageBox.Ok)
         # else:
-            #     QMessageBox.warning(self,'Function error','Please select a function first before loading parameter file.',QMessageBox.Ok)
+        #     QMessageBox.warning(self,'Function error','Please select a function first before loading parameter file.', QMessageBox.Ok)
 
         
     def create_plotDock(self):
@@ -2291,24 +2301,30 @@ class XModFit(QWidget):
                 for key in self.data[self.sfnames[-1]].keys():
                     x[key] = self.data[self.sfnames[-1]][key]['x']
                     y[key] = self.data[self.sfnames[-1]][key]['y']
+                    y[key] = y[key][np.argwhere(x[key] >= self.xmin)[0][0]:np.argwhere(x[key] <= self.xmax)[-1][0]]
                     yerr[key] = self.data[self.sfnames[-1]][key]['yerr']
+                    yerr[key] = yerr[key][np.argwhere(x[key] >= self.xmin)[0][0]:np.argwhere(x[key] <= self.xmax)[-1][0]]
+                    x[key] = x[key][np.argwhere(x[key]>=self.xmin)[0][0]:np.argwhere(x[key]<=self.xmax)[-1][0]]
             else:
                 key = list(self.data[self.sfnames[-1]].keys())[0]
                 x = self.data[self.sfnames[-1]][key]['x']
                 y = self.data[self.sfnames[-1]][key]['y']
+                y = y[np.argwhere(x >= self.xmin)[0][0]:np.argwhere(x <= self.xmax)[-1][0]]
                 yerr = self.data[self.sfnames[-1]][key]['yerr']
-            try:
-                self.fit.set_x(x, y=y, yerr=yerr)
-                residual = self.fit.residual(self.fit.fit_params, self.fitScaleComboBox.currentText())
-                self.chisqr=np.sum(residual**2)
-            except:
-                pass
+                yerr = yerr[np.argwhere(x >= self.xmin)[0][0]:np.argwhere(x <= self.xmax)[-1][0]]
+                x = x[np.argwhere(x>=self.xmin)[0][0]:np.argwhere(x<=self.xmax)[-1][0]]
+
         if len(self.funcListWidget.selectedItems())>0:
             try:
                 self.fit.evaluate()
             except:
                 QMessageBox.warning(self, 'Evaluation Error', traceback.format_exc(), QMessageBox.Ok)
                 self.fit.yfit = self.fit.func.x
+            if len(self.dataListWidget.selectedItems()) > 0:
+                self.fit.set_x(x, y=y, yerr=yerr)
+                residual = self.fit.residual(self.fit.fit_params, self.fitScaleComboBox.currentText())
+                self.chisqr = np.sum(residual ** 2)
+
             try:
                 self.genParamListWidget.itemSelectionChanged.disconnect()
             except:
@@ -2364,6 +2380,7 @@ class XModFit(QWidget):
                 data={'data':pd.DataFrame(list(zip(x,y)),columns=['x','y']),'meta':{'col_names':[]}}
                 data_dlg = Data_Dialog(data=data, parent=self, expressions={},
                                        plotIndex=None, colors=None)
+                data_dlg.setModal(True)
                 data_dlg.closePushButton.setText('Cancel')
                 data_dlg.tabWidget.setCurrentIndex(0)
                 data_dlg.dataFileLineEdit.setText('None')
@@ -2400,8 +2417,8 @@ if __name__=='__main__':
     app=QApplication(sys.argv)
     w=XModFit()
     w.setWindowTitle('XModFit')
-    screen=QDesktopWidget().screenGeometry()
-    w.setGeometry(0,0,screen.width(),screen.height())
+    # screen=QDesktopWidget().screenGeometry()
+    # w.setGeometry(0,0,screen.width(),screen.height())
     try:
         fname = sys.argv[1]
         w.addData(fnames=[fname])
@@ -2413,7 +2430,7 @@ if __name__=='__main__':
     except:
         pass
     w.showMaximized()
-    w.show()
+    # w.show()
     sys.exit(app.exec_())
         
         
