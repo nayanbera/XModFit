@@ -16,7 +16,6 @@ from Structure_Factors import hard_sphere_sf, sticky_sphere_sf
 from ff_cylinder import ff_cylinder_ml_asaxs
 from utils import find_minmax, calc_rho, create_steps
 
-
 class Cylinder_Uniform: #Please put the class name same as the function name
     def __init__(self, x=0, Np=10, flux=1e13, dist='Gaussian', Energy=None, relement='Au', NrDep='True', H=1.0,
                  Rsig=0.0, norm=1.0, sbkg=0.0, cbkg=0.0, abkg=0.0, D=1.0, phi=0.1, U=-1.0, SF='None',Nalf=200,term='Total',
@@ -109,13 +108,16 @@ class Cylinder_Uniform: #Please put the class name same as the function name
                         self.params.add('__%s_%s_%03d' % (mkey, key, i), value=self.__mpar__[mkey][key][i], vary=0,
                                         min=0.0,
                                         max=np.inf, expr=None, brute_step=0.1)
-    @lru_cache(maxsize=2)
+    @lru_cache(maxsize=10)
     def calc_Rdist(self, R, Rsig, dist, N):
         R = np.array(R)
         totalR = np.sum(R[:-1])
         if Rsig > 0.001:
             fdist = eval(dist + '.' + dist + '(x=0.001, pos=totalR, wid=Rsig)')
-            rmin, rmax = find_minmax(fdist, totalR, Rsig)
+            if dist=='Gaussian':
+                rmin, rmax = max(0.001, totalR - 5 * self.Rsig), totalR + 5 * self.Rsig
+            else:
+                rmin,rmax=max(0.001, np.exp(np.log(totalR) - 5*self.Rsig)), np.exp(np.log(totalR) + 5*self.Rsig)
             dr = np.linspace(rmin, rmax, N)
             fdist.x = dr
             rdist = fdist.y()
@@ -127,7 +129,7 @@ class Cylinder_Uniform: #Please put the class name same as the function name
             self.output_params['Distribution'] = {'x': [totalR], 'y': [1.0]}
             return [totalR], [1.0], totalR
 
-    @lru_cache(maxsize=2)
+    @lru_cache(maxsize=10)
     def cylinder(self, q, R, H, Rsig, rho, eirho, adensity, dist='Gaussian', Np=10, Nalf=1000):
         q = np.array(q)
         dr, rdist, totalR = self.calc_Rdist(R, Rsig, dist, Np)
@@ -145,7 +147,7 @@ class Cylinder_Uniform: #Please put the class name same as the function name
             cform = cform + rdist[i] * ffc
         return pfac * form, pfac * eiform, pfac * aform, np.abs(pfac * cform)  # in cm^2
 
-    @lru_cache(maxsize=2)
+    @lru_cache(maxsize=10)
     def cylinder_dict(self, q, R, H, Rsig, rho, eirho, adensity, dist='Gaussian', Np=10, Nalf=1000):
         form, eiform, aform, cform = self.cylinder(q, R, H, Rsig, rho, eirho, adensity, dist=dist, Np=Np,
                                                     Nalf=Nalf)

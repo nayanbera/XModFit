@@ -14,7 +14,7 @@ from ff_sphere import ff_sphere_ml
 from Chemical_Formula import Chemical_Formula
 from PeakFunctions import LogNormal, Gaussian
 from Structure_Factors import hard_sphere_sf, sticky_sphere_sf
-from utils import find_minmax, calc_rho
+from utils import find_minmax, calc_rho, create_steps
 from functools import lru_cache
 import time
 
@@ -107,7 +107,10 @@ class Sphere_Uniform: #Please put the class name same as the function name
         totalR = np.sum(R[:-1])
         if Rsig > 0.001:
             fdist = eval(dist + '.' + dist + '(x=0.001, pos=totalR, wid=Rsig)')
-            rmin, rmax = find_minmax(fdist, totalR, Rsig)
+            if dist == 'Gaussian':
+                rmin, rmax = max(0.001, totalR - 5 * self.Rsig), totalR + 5 * self.Rsig
+            else:
+                rmin, rmax = max(0.001, np.exp(np.log(totalR) - 5 * self.Rsig)), np.exp(np.log(totalR) + 5 * self.Rsig)
             dr = np.linspace(rmin, rmax, N)
             fdist.x = dr
             rdist = fdist.y()
@@ -207,6 +210,10 @@ class Sphere_Uniform: #Please put the class name same as the function name
                 self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1]}
                 self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1]}
                 self.output_params['Structure_Factor'] = {'x': self.x, 'y': struct}
+                xtmp, ytmp = create_steps(x=self.__R__[:-1], y=self.__Rmoles__[:-1])
+                self.output_params['Rmoles_radial'] = {'x': xtmp, 'y': ytmp}
+                xtmp, ytmp = create_steps(x=self.__R__[:-1], y=self.__density__[:-1])
+                self.output_params['Density_radial'] = {'x': xtmp, 'y': ytmp}
         else:
             if self.SF is None:
                 struct = np.ones_like(self.x)
@@ -234,7 +241,11 @@ class Sphere_Uniform: #Please put the class name same as the function name
             self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1]}
             self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1]}
             self.output_params['Structure_Factor'] = {'x': self.x, 'y': struct}
+            xtmp, ytmp = create_steps(x=self.__R__[:-1], y=self.__Rmoles__[:-1])
+            self.output_params['Rmoles_radial'] = {'x': xtmp, 'y': ytmp}
             sqf = self.output_params[self.term]['y']
+            xtmp, ytmp = create_steps(x=self.__R__[:-1], y=self.__density__[:-1])
+            self.output_params['Density_radial'] = {'x': xtmp, 'y': ytmp}
         return sqf
 
 

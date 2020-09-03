@@ -121,8 +121,7 @@ def calc_rho(R=(1.0, 0.0), material=('Au', 'H2O'), relement='Au', density=(19.3,
                     if element_adjust is not None:
                         cf.formula_dict[relement] = 0.0
                         t1 = cf.molar_mass()
-                        cf.formula_dict[element_adjust] = cf.element_mole_ratio()[
-                                                                       element_adjust] - Rmoles[i]
+                        cf.formula_dict[element_adjust] = cf.element_mole_ratio()[element_adjust] - Rmoles[i]
                         cf.formula_dict[relement] = Rmoles[i]
                         t2 = cf.molar_mass()
                         if t1 > 0:
@@ -215,7 +214,7 @@ def calc_rho(R=(1.0, 0.0), material=('Au', 'H2O'), relement='Au', density=(19.3,
         rhor[-1, 0] = rhor[-1, 0] + R[-2]
         eirhor[-1, 0] = eirhor[-1, 0] + R[-2]
         adensityr[-1, 0] = adensityr[-1, 0] + R[-2]
-        return rho, eirho, adensity, rhor, eirhor, adensityr
+        return np.array(rho), np.array(eirho), np.array(adensity), np.array(rhor), np.array(eirhor), np.array(adensityr)
 
 def create_steps(x=[1],y=[1]):
     res=np.array([[0.0,0.0]])

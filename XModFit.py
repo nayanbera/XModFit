@@ -1467,9 +1467,16 @@ class XModFit(QWidget):
                             # if col!=0:
                             del self.fit.params['__mpar__'][mkey][pkey][trow]
                                 # del self.fit.fit_params[key1]
-
                 self.mfitParamTableWidget[mkey].removeRow(row)
                 self.mfitParamData[mkey]=np.delete(self.mfitParamData[mkey],row,axis=0)
+            #updating the tooltips after removal of rows
+            for col in range(1,self.mfitParamTableWidget[mkey].columnCount()):
+                pkey = self.mfitParamTableWidget[mkey].horizontalHeaderItem(col).text()
+                for row in range(self.mfitParamTableWidget[mkey].rowCount()):
+                    item=self.mfitParamTableWidget[mkey].item(row, col)
+                    key = '__%s_%s_%03d' % (mkey, pkey, row)
+                    item.setToolTip((key + ' = ' + self.format + ' \u00B1 ' + self.format) % \
+                        (self.fit.fit_params[key].value, 0.0))
         else:
             QMessageBox.warning(self,'Nothing selected','No item is selected for removal',QMessageBox.Ok)
         self.mfitParamTableWidget[mkey].cellChanged.connect(self.mfitParamChanged_new)
