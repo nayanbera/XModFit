@@ -24,7 +24,8 @@ class Sphere_Uniform_Edep: #Please put the class name same as the function name
         Documentation
         Calculates the Energy dependent form factor of multilayered nanoparticles with different materials
 
-        x           : Reciprocal wave-vector 'Q' inv-Angs in the form of a scalar or an array
+        x           : Reciprocal wave-vector 'Q' inv-Angs in the form of a scalar or an array. For energy dependence you need to
+        provide a dictionary like {'E_11.919':linspace(0.001,1.0,1000)}
         relement    : Resonant element of the nanoparticle. Default: 'Au'
         Np          : No. of points with which the size distribution will be computed. Default: 10
         Energy      : Energy of the X-rays
@@ -163,25 +164,32 @@ class Sphere_Uniform_Edep: #Please put the class name same as the function name
             sqf={}
             for key in self.x.keys():
                 sq=[]
+                term=key.split('_')[0]
                 Energy=float(key.split('_')[1].split(':')[1])
                 rho,eirho,adensity,rhor,eirhor,adensityr=calc_rho(R=self.__R__,material=self.__material__,
                                                                        density=self.__density__, sol_density=self.__solDensity__,
                                                                        Energy=Energy, Rmoles= self.__Rmoles__, NrDep=self.NrDep)
                 sqf[key] = self.norm * 6.022e20 * self.new_sphere_dict(tuple(self.x[key]), tuple(self.__R__),
                                                                        self.Rsig, tuple(rho), tuple(eirho),
-                                                                       tuple(adensity), key=key, dist=self.dist,
+                                                                       tuple(adensity), key=term, dist=self.dist,
                                                                        Np=self.Np)  # in cm^-1
-            if self.SF is None:
-                struct = np.ones_like(self.x[key])  # hard_sphere_sf(self.x[key], D = self.D, phi = 0.0)
-            elif self.SF == 'Hard-Sphere':
-                struct = hard_sphere_sf(self.x[key], D=self.D, phi=self.phi)
-            else:
-                struct = sticky_sphere_sf(self.x[key], D=self.D, phi=self.phi, U=self.U, delta=0.01)
+                if self.SF is None:
+                    struct = np.ones_like(self.x[key])  # hard_sphere_sf(self.x[key], D = self.D, phi = 0.0)
+                elif self.SF == 'Hard-Sphere':
+                    struct = hard_sphere_sf(self.x[key], D=self.D, phi=self.phi)
+                else:
+                    struct = sticky_sphere_sf(self.x[key], D=self.D, phi=self.phi, U=self.U, delta=0.01)
+                sqf[key]=sqf[key]*struct+self.bkg
+
 
             if not self.__fit__:
                 self.output_params['rho_r'] = {'x': rhor[:, 0], 'y': rhor[:, 1]}
                 self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1]}
                 self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1]}
+                for key in self.x.keys():
+                    term = key.split('_')[0]
+                    Energy = key.split('_')[1].split(':')[1]
+                    self.output_params[term+'_E='+Energy]={'x':self.x[key],'y':sqf[key]}
 
         else:
             rho, eirho, adensity, rhor, eirhor, adensityr = calc_rho(R=self.__R__,material=self.__material__,
@@ -202,6 +210,6 @@ class Sphere_Uniform_Edep: #Please put the class name same as the function name
 
 
 if __name__=='__main__':
-    x=np.arange(0.001,1.0,0.1)
+    x={'Total_E:11.919':np.arange(0.003,0.15,0.001),'Total_E:11.9126':np.arange(0.003,0.15,0.001),'Total_E:11.9098':np.arange(0.003,0.15,0.001),'Total_E:11.9072':np.arange(0.003,0.15,0.001),'Total_E:11.9037':np.arange(0.003,0.15,0.001),'Total_E:11.8984':np.arange(0.003,0.15,0.001),'Total_E:11.8914':np.arange(0.003,0.15,0.001),'Total_E:11.8830':np.arange(0.003,0.15,0.001),'Total_E:11.8714':np.arange(0.003,0.15,0.001),'Total_E:11.8564':np.arange(0.003,0.15,0.001),'Total_E:11.8364':np.arange(0.003,0.15,0.001),'Total_E:11.8098':np.arange(0.003,0.15,0.001),'Total_E:11.7748':np.arange(0.003,0.15,0.001),'Total_E:11.7288':np.arange(0.003,0.15,0.001),'Total_E:11.6673':np.arange(0.003,0.15,0.001),'Total_E:11.5860':np.arange(0.003,0.15,0.001),'Total_E:11.4796':np.arange(0.003,0.15,0.001),'Total_E:11.3396':np.arange(0.003,0.15,0.001),'Total_E:11.1567':np.arange(0.003,0.15,0.001),'Total_E:10.919':np.arange(0.003,0.15,0.001)}
     fun=Sphere_Uniform_Edep(x=x)
     print(fun.y())
