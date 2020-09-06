@@ -19,7 +19,7 @@ from functools import lru_cache
 import time
 
 class Sphere_Uniform: #Please put the class name same as the function name
-    def __init__(self, x=0, Np=10, flux=1e13, term='Total',dist='Gaussian', Energy=None, relement='Au', NrDep='True',
+    def __init__(self, x=0, Np=20, flux=1e13, term='Total',dist='Gaussian', Energy=None, relement='Au', NrDep='True',
                  norm=1.0, sbkg=0.0, cbkg=0.0, abkg=0.0, D=1.0, phi=0.1, U=-1.0, SF='None',Rsig=0.0,
                  mpar={'Layers':{'Material':['Au','H2O'],'Density':[19.32,1.0],'SolDensity':[1.0,1.0],'Rmoles':[1.0,0.0],'R':[1.0,0.0]}}):
         """
@@ -37,7 +37,7 @@ class Sphere_Uniform: #Please put the class name same as the function name
         cbkg        : Constant incoherent background for cross-term
         abkg        : Constant incoherent background for Resonant-term
         flux        : Total X-ray flux to calculate the errorbar to simulate the errorbar for the fitted data
-        term        : 'SAXS-term' or 'Cross-term' or 'Resonant-term'
+        term        : 'SAXS-term' or 'Cross-term' or 'Resonant-term' or 'Total'
         D           : Hard Sphere Diameter
         phi         : Volume fraction of particles
         U           : The sticky-sphere interaction energy
@@ -108,18 +108,17 @@ class Sphere_Uniform: #Please put the class name same as the function name
         if Rsig > 0.001:
             fdist = eval(dist + '.' + dist + '(x=0.001, pos=totalR, wid=Rsig)')
             if dist == 'Gaussian':
-                rmin, rmax = max(0.001, totalR - 5 * self.Rsig), totalR + 5 * self.Rsig
+                rmin, rmax = max(0.001, totalR - 5 * Rsig), totalR + 5 * Rsig
+                dr = np.linspace(rmin, rmax, N)
             else:
-                rmin, rmax = max(0.001, np.exp(np.log(totalR) - 5 * self.Rsig)), np.exp(np.log(totalR) + 5 * self.Rsig)
-            dr = np.linspace(rmin, rmax, N)
+                rmin, rmax = max(-3, np.log(totalR) - 5 * Rsig), np.log(totalR) + 5 * Rsig
+                dr = np.logspace(rmin, rmax, N, base=np.exp(1.0))
             fdist.x = dr
             rdist = fdist.y()
             sumdist = np.sum(rdist)
             rdist = rdist / sumdist
-            self.output_params['Distribution'] = {'x': dr, 'y': rdist}
             return dr, rdist, totalR
         else:
-            self.output_params['Distribution'] = {'x': [totalR], 'y': [1.0]}
             return [totalR], [1.0], totalR
 
     @lru_cache(maxsize=10)
@@ -139,8 +138,8 @@ class Sphere_Uniform: #Please put the class name same as the function name
             eiform = eiform + rdist[i] * eiff
             aff, maff = ff_sphere_ml(q, r, adensity)
             aform = aform + rdist[i] * aff
-            cform = cform + rdist[i] * meiff * maff
-        return pfac * form, pfac * eiform, pfac * aform, np.abs(pfac * cform)  # in cm^2
+            cform = cform + rdist[i] * (meiff * maff.conjugate()+meiff.conjugate()*maff)
+        return pfac * form, pfac * eiform, pfac * aform, np.abs(pfac * cform)/2  # in cm^2
 
     @lru_cache(maxsize=2)
     def new_sphere_dict(self, q, R, Rsig, rho, eirho, adensity, dist='Gaussian',Np=10,key='SAXS-term'):
@@ -205,6 +204,8 @@ class Sphere_Uniform: #Please put the class name same as the function name
                                                                          tuple(adensity),
                                                                          key=key1,dist=self.dist,Np=self.Np) + self.sbkg  # in cm^-1
             if not self.__fit__:
+                dr, rdist, totalR = self.calc_Rdist(tuple(self.__R__), self.Rsig, self.dist, self.Np)
+                self.output_params['Distribution'] = {'x': dr, 'y': rdist}
                 self.output_params['Simulated_total_wo_err'] = {'x': self.x[key], 'y': total}
                 self.output_params['rho_r'] = {'x': rhor[:, 0], 'y': rhor[:, 1]}
                 self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1]}
@@ -232,6 +233,8 @@ class Sphere_Uniform: #Please put the class name same as the function name
             svol = 0.2 ** 2 * 1.5 * 1e-3  # scattering volume in cm^3
             sqerr = np.sqrt(self.flux *self.norm*tsqf * svol)
             sqwerr = (tsqf * svol * self.flux*self.norm + 2 * (0.5 - np.random.rand(len(tsqf))) * sqerr)
+            dr, rdist, totalR = self.calc_Rdist(tuple(self.__R__), self.Rsig, self.dist, self.Np)
+            self.output_params['Distribution'] = {'x': dr, 'y': rdist}
             self.output_params['simulated_total_w_err'] = {'x': self.x, 'y': sqwerr, 'yerr': sqerr}
             self.output_params['Total'] = {'x': self.x, 'y': tsqf * svol * self.flux*self.norm}
             self.output_params['Resonant-term'] = {'x': self.x, 'y': asqf}
@@ -250,6 +253,6 @@ class Sphere_Uniform: #Please put the class name same as the function name
 
 
 if __name__=='__main__':
-    x=np.arange(0.001,1.0,0.1)
+    x=np.arange(0.001,1.0,0.001)
     fun=Sphere_Uniform(x=x)
     print(fun.y())

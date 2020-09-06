@@ -89,12 +89,14 @@ def calc_rho(R=(1.0, 0.0), material=('Au', 'H2O'), relement='Au', density=(19.3,
     """
     Calculates the complex electron density of core-shell type multilayered particles in el/Angstroms^3
 
-    R         :: list of Radii and subsequent shell thicknesses in Angstroms of the nanoparticle system
-    material  :: list of material of all the shells starting from the core to outside
-    relement  :: Resonant element
-    density   :: list of density of all the materials in gm/cm^3 starting from the inner core to outside
-    Rmoles    :: mole-fraction of the resonant element in the materials
-    Energy    :: Energy in keV
+    R           :: list of Radii and subsequent shell thicknesses in Angstroms of the nanoparticle system
+    material    :: list of material of all the shells starting from the core to outside
+    relement    :: Resonant element
+    density     :: list of density of all the materials in gm/cm^3 starting from the inner core to outside
+    Rmoles      :: mole-fraction of the resonant element in the materials
+    sol_density :: density of solvent in which the particle layers are dissolved
+    NrDep       :: True or False for using or not using energy dependent scattering factors for non-resonant elements
+    Energy      :: Energy in keV
     """
     density = list(density)
     if len(material) == len(density):
@@ -197,12 +199,9 @@ def calc_rho(R=(1.0, 0.0), material=('Au', 'H2O'), relement='Au', density=(19.3,
                         felectrons = felectrons + moles[j] * complex(f1, f2)
                 if elements[j] == relement:
                     aden += 0.6023 * moles[j] * tdensity / molwt
-            adensity.append(
-                aden)  # * np.where(r > Radii[i - 1], 1.0, 0.0) * pl.where(r <= Radii[i], 1.0, 0.0) / molwt
-            eirho.append(0.6023 * (
-                nelectrons) * tdensity / molwt)  # * np.where(r > Radii[i - 1], 1.0,0.0) * pl.where(r <= Radii[i], 1.0,0.0) / molwt
-            rho.append(0.6023 * (
-                    nelectrons + felectrons) * tdensity / molwt)  # * np.where(r > Radii[i - 1], 1.0,0.0) * pl.where(r <= Radii[i], 1.0, 0.0) / molwt
+            adensity.append(aden)
+            eirho.append(0.6023 * (nelectrons) * tdensity / molwt)
+            rho.append(0.6023 * (nelectrons + felectrons) * tdensity / molwt)
             rhor.append([r, np.real(rho[-1])])
             eirhor.append([r, np.real(eirho[-1])])
             adensityr.append([r, np.real(adensity[-1])])
