@@ -442,9 +442,10 @@ class Sphere_Double_Layer: #Please put the class name same as the function name
                 self.output_params['Distribution'] = {'x': dr, 'y': rdist}
                 self.output_params['simulated_total_w_err'] = {'x': self.x, 'y': sqwerr, 'yerr': sqerr}
                 self.output_params['simulated_total_wo_err'] = {'x': self.x, 'y': sqf * svol * self.flux}
-                self.output_params['simulated_anomalous'] = {'x': self.x, 'y': asqf}
-                self.output_params['simulated_saxs'] = {'x': self.x, 'y': eisqf}
-                self.output_params['simulated_cross'] = {'x': self.x, 'y': csqf}
+                self.output_params['SAXS-term'] = {'x': self.x, 'y': sqf}
+                self.output_params['SAXS-term'] = {'x': self.x, 'y': eisqf}
+                self.output_params['Cross-term'] = {'x': self.x, 'y': csqf}
+                self.output_params['Resontant-term'] = {'x': self.x, 'y': asqf}
                 self.output_params['rho_r'] = {'x': rhor[:, 0], 'y': rhor[:, 1],'names':['r (Angs)','Electron Density (el/Angs^3)']}
                 self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1],'names':['r (Angs)','Electron Density (el/Angs^3)']}
                 self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1]*scale, 'names':['r (Angs)','Density (Molar)']} # in Molar

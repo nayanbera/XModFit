@@ -115,18 +115,16 @@ class Cylinder_Uniform: #Please put the class name same as the function name
         if Rsig > 0.001:
             fdist = eval(dist + '.' + dist + '(x=0.001, pos=totalR, wid=Rsig)')
             if dist=='Gaussian':
-                rmin, rmax = max(0.001, totalR - 5 * self.Rsig), totalR + 5 * self.Rsig
+                rmin, rmax = max(0.001, totalR - 5 * Rsig), totalR + 5 * Rsig
             else:
-                rmin,rmax=max(0.001, np.exp(np.log(totalR) - 5*self.Rsig)), np.exp(np.log(totalR) + 5*self.Rsig)
+                rmin,rmax=max(0.001, np.exp(np.log(totalR) - 5*Rsig)), np.exp(np.log(totalR) + 5*Rsig)
             dr = np.linspace(rmin, rmax, N)
             fdist.x = dr
             rdist = fdist.y()
             sumdist = np.sum(rdist)
             rdist = rdist / sumdist
-            self.output_params['Distribution'] = {'x': dr, 'y': rdist}
             return dr, rdist, totalR
         else:
-            self.output_params['Distribution'] = {'x': [totalR], 'y': [1.0]}
             return [totalR], [1.0], totalR
 
     @lru_cache(maxsize=10)
@@ -172,6 +170,7 @@ class Cylinder_Uniform: #Please put the class name same as the function name
         """
         Define the function in terms of x to return some value
         """
+        svol = 1.5*0.0172**2/370**2  # scattering volume in cm^3
         self.update_params()
         rho, eirho, adensity, rhor, eirhor, adensityr = calc_rho(R=tuple(self.__R__), material=tuple(self.__material__),
                                                                  relement=self.relement,
@@ -199,10 +198,13 @@ class Cylinder_Uniform: #Please put the class name same as the function name
                     sqf[key] = self.norm * 6.022e20 *sqft[key] * struct + self.cbkg # in cm^-1
                 if key == 'Resonant-term':
                     sqf[key] = self.norm * 6.022e20 *sqft[key] * struct + self.abkg # in cm^-1
-            key1='Total'
+            key='Total'
             total= self.norm * 6.022e20 *sqft[key] * struct + self.sbkg
             if not self.__fit__:
-                self.output_params['Simulated_total_wo_err'] = {'x': self.x[key], 'y':total}
+                dr, rdist, totalR = self.calc_Rdist(tuple(self.__R__), self.Rsig, self.dist, self.Np)
+                self.output_params['Distribution'] = {'x': dr, 'y': rdist}
+                self.output_params['Total'] = {'x': self.x[key], 'y':total}
+                self.output_params['SAXS_term']={'x':self.x[key]}
                 self.output_params['rho_r'] = {'x': rhor[:, 0], 'y': rhor[:, 1]}
                 self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1]}
                 self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1]}
@@ -227,11 +229,10 @@ class Cylinder_Uniform: #Please put the class name same as the function name
             asqf = self.norm * np.array(asqf) * 6.022e20 * struct + self.abkg  # in cm^-1
             eisqf = self.norm * np.array(eisqf) * 6.022e20 * struct + self.sbkg  # in cm^-1
             csqf = self.norm * np.array(csqf) * 6.022e20 * struct + self.cbkg  # in cm^-1
-            svol = 0.2 ** 2 * 1.5 * 1e-3  # scattering volume in cm^3
-            sqerr = np.sqrt(self.flux * tsqf * svol)
-            sqwerr = (tsqf * svol * self.flux + 2 * (0.5 - np.random.rand(len(tsqf))) * sqerr)
+            sqerr = np.sqrt(self.norm*6.022e20*self.flux * tsqf * svol*struct+self.sbkg)
+            sqwerr = (self.norm*6.022e20*tsqf * svol * struct*self.flux+self.sbkg + 2 * (0.5 - np.random.rand(len(tsqf))) * sqerr)
             self.output_params['simulated_total_w_err'] = {'x': self.x, 'y': sqwerr, 'yerr': sqerr}
-            self.output_params['Total'] = {'x': self.x, 'y': tsqf * svol * self.flux}
+            self.output_params['Total'] = {'x': self.x, 'y': sqf}
             self.output_params['Resonant-term'] = {'x': self.x, 'y': asqf}
             self.output_params['SAXS-term'] = {'x': self.x, 'y': eisqf}
             self.output_params['Cross-term'] = {'x': self.x, 'y': csqf}
@@ -244,6 +245,8 @@ class Cylinder_Uniform: #Please put the class name same as the function name
             sqf = self.output_params[self.term]['y']
             xtmp, ytmp = create_steps(x=self.__R__[:-1], y=self.__density__[:-1])
             self.output_params['Density_radial'] = {'x': xtmp, 'y': ytmp}
+            dr, rdist, totalR = self.calc_Rdist(tuple(self.__R__), self.Rsig, self.dist, self.Np)
+            self.output_params['Distribution'] = {'x': dr, 'y': rdist}
         return sqf
 
 
