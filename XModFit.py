@@ -2230,8 +2230,7 @@ class XModFit(QWidget):
                             for k in self.fit.params['output_params'][key].keys():
                                 if k!='names':
                                     var.append(k)
-                            self.genParamListWidget.addItem(
-                                str(key) + ' : ' + str(var))
+                            self.genParamListWidget.addItem(str(key) + ' : ' + str(var))
                     if not self.fchanged:
                         for i in range(self.genParamListWidget.count()):
                             item = self.genParamListWidget.item(i)
@@ -2386,9 +2385,9 @@ class XModFit(QWidget):
                 y=self.fit.params['output_params'][key]['y']
                 if 'yerr' in self.fit.params['output_params'][key].keys():
                     yerr=self.fit.params['output_params'][key]['yerr']
-                    data = {'data': pd.DataFrame(list(zip(x, y, yerr)), columns=['x', 'y', 'yerr']), 'meta': {'col_names': []}}
+                    data={'data':pd.DataFrame(list(zip(x,y,yerr)),columns=['x','y','yerr']),'meta':{'col_names':[]}}
                 else:
-                    data={'data':pd.DataFrame(list(zip(x,y)),columns=['x','y']),'meta':{'col_names':[]}}
+                    data = {'data': pd.DataFrame(list(zip(x, y)), columns=['x', 'y']), 'meta': {'col_names': []}}
                 data_dlg = Data_Dialog(data=data, parent=self, expressions={},
                                        plotIndex=None, colors=None)
                 data_dlg.setModal(True)
