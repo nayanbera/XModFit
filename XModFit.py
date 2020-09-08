@@ -2384,7 +2384,11 @@ class XModFit(QWidget):
             if 'x' in self.fit.params['output_params'][key].keys() and 'y' in self.fit.params['output_params'][key].keys():
                 x=self.fit.params['output_params'][key]['x']
                 y=self.fit.params['output_params'][key]['y']
-                data={'data':pd.DataFrame(list(zip(x,y)),columns=['x','y']),'meta':{'col_names':[]}}
+                if 'yerr' in self.fit.params['output_params'][key].keys():
+                    yerr=self.fit.params['output_params'][key]['yerr']
+                    data = {'data': pd.DataFrame(list(zip(x, y, yerr)), columns=['x', 'y', 'yerr']), 'meta': {'col_names': []}}
+                else:
+                    data={'data':pd.DataFrame(list(zip(x,y)),columns=['x','y']),'meta':{'col_names':[]}}
                 data_dlg = Data_Dialog(data=data, parent=self, expressions={},
                                        plotIndex=None, colors=None)
                 data_dlg.setModal(True)

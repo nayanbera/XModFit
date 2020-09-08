@@ -230,13 +230,13 @@ class Sphere_Uniform: #Please put the class name same as the function name
             asqf = self.norm * np.array(asqf) * 6.022e20 * struct + self.abkg  # in cm^-1
             eisqf = self.norm * np.array(eisqf) * 6.022e20 * struct + self.sbkg  # in cm^-1
             csqf = self.norm * np.array(csqf) * 6.022e20 * struct + self.cbkg  # in cm^-1
-            svol = 0.2 ** 2 * 1.5 * 1e-3  # scattering volume in cm^3
-            sqerr = np.sqrt(self.flux *self.norm*tsqf * svol)
-            sqwerr = (tsqf * svol * self.flux*self.norm + 2 * (0.5 - np.random.rand(len(tsqf))) * sqerr)
+            svol = 0.15 * 0.0172**2/370**2 # scattering volume in cm^3
+            sqerr = np.sqrt(6.022e20*self.flux *self.norm*tsqf * svol*struct)
+            sqwerr = (tsqf*6.022e20*svol * self.flux*self.norm*struct + 2 * (0.5 - np.random.rand(len(tsqf))) * sqerr)+self.sbkg
             dr, rdist, totalR = self.calc_Rdist(tuple(self.__R__), self.Rsig, self.dist, self.Np)
             self.output_params['Distribution'] = {'x': dr, 'y': rdist}
             self.output_params['simulated_total_w_err'] = {'x': self.x, 'y': sqwerr, 'yerr': sqerr}
-            self.output_params['Total'] = {'x': self.x, 'y': tsqf * svol * self.flux*self.norm}
+            self.output_params['Total'] = {'x': self.x, 'y': sqf}
             self.output_params['Resonant-term'] = {'x': self.x, 'y': asqf}
             self.output_params['SAXS-term'] = {'x': self.x, 'y': eisqf}
             self.output_params['Cross-term'] = {'x': self.x, 'y': csqf}
