@@ -198,17 +198,19 @@ class Cylinder_Uniform: #Please put the class name same as the function name
                     sqf[key] = self.norm * 6.022e20 *sqft[key] * struct + self.cbkg # in cm^-1
                 if key == 'Resonant-term':
                     sqf[key] = self.norm * 6.022e20 *sqft[key] * struct + self.abkg # in cm^-1
-            key='Total'
-            total= self.norm * 6.022e20 *sqft[key] * struct + self.sbkg
+            key1='Total'
+            total= self.norm * 6.022e20 *sqft[key1] * struct + self.sbkg
             if not self.__fit__:
                 dr, rdist, totalR = self.calc_Rdist(tuple(self.__R__), self.Rsig, self.dist, self.Np)
                 self.output_params['Distribution'] = {'x': dr, 'y': rdist}
                 self.output_params['Total'] = {'x': self.x[key], 'y':total}
-                self.output_params['SAXS_term']={'x':self.x[key]}
+                self.output_params['SAXS-term'] = {'x': self.x['SAXS-term'], 'y': sqf['SAXS-term']}
+                self.output_params['Cross-term'] = {'x': self.x['Cross-term'], 'y': sqf['Cross-term']}
+                self.output_params['Resonant-term'] = {'x': self.x['Resonant-term'], 'y': sqf['Resonant-term']}
                 self.output_params['rho_r'] = {'x': rhor[:, 0], 'y': rhor[:, 1]}
                 self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1]}
                 self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1]}
-                self.output_params['Structure_Factor'] = {'x': self.x, 'y': struct}
+                self.output_params['Structure_Factor'] = {'x': self.x[key], 'y': struct}
                 xtmp,ytmp=create_steps(x=self.__R__[:-1],y=self.__Rmoles__[:-1])
                 self.output_params['Rmoles_radial']={'x':xtmp,'y':ytmp}
                 xtmp, ytmp = create_steps(x=self.__R__[:-1], y=self.__density__[:-1])

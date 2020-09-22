@@ -194,6 +194,7 @@ class Sphere_Uniform_Edep: #Please put the class name same as the function name
                 self.output_params['rho_r'] = {'x': rhor[:, 0], 'y': rhor[:, 1]}
                 self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1]}
                 self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1]}
+                self.output_params['Structure_Factor']={'x':self.x[key],'y':struct}
                 for key in self.x.keys():
                     term = key.split('_')[0]
                     Energy = key.split('_')[1].split(':')[1]
@@ -229,6 +230,7 @@ class Sphere_Uniform_Edep: #Please put the class name same as the function name
                 sqwerr = (6.022e20 * tsqf * svol * self.flux * self.norm * struct + self.bkg + 2 * (
                         0.5 - np.random.rand(len(tsqf))) * sqerr)
                 self.output_params['simulated_total_w_err'] = {'x': self.x, 'y': sqwerr, 'yerr': sqerr}
+                self.output_params['Structure_Factor'] = {'x': self.x, 'y': struct}
                 self.output_params['rho_r'] = {'x': rhor[:, 0], 'y': rhor[:, 1]}
                 self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1]}
                 self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1]}

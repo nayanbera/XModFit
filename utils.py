@@ -120,14 +120,14 @@ def calc_rho(R=(1.0, 0.0), material=('Au', 'H2O'), relement='Au', density=(19.3,
                 solute_formula = cf.parse(solute)
                 fac=1.0
                 if relement in solute_formula.keys():
+                    cf.formula_dict[relement] = 0.0
+                    t1 = cf.molar_mass()
                     if element_adjust is not None:
-                        cf.formula_dict[relement] = 0.0
-                        t1 = cf.molar_mass()
                         cf.formula_dict[element_adjust] = cf.element_mole_ratio()[element_adjust] - Rmoles[i]
-                        cf.formula_dict[relement] = Rmoles[i]
-                        t2 = cf.molar_mass()
-                        if t1 > 0:
-                            fac = t2 / t1
+                    cf.formula_dict[relement] = Rmoles[i]
+                    t2 = cf.molar_mass()
+                    if t1 > 0:
+                        fac = t2 / t1
                 density[i] = fac * density[i]
                 solute_elements = cf.elements()
                 solute_mw = cf.molecular_weight()
