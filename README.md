@@ -1,7 +1,7 @@
 XModFit
 -------
 
-**XModFit** stands for **X**-ray **Mod**eling and **Fit**ting. This package provides python based GUI framework for rapid function/model development and data fitting. This package is developed at NSF's ChemMatCARS, 15IDD, Advanced Photon Source.
+**XModFit** stands for **X**-ray **Mod**eling and **Fit**ting. This package provides python based GUI framework for rapid function/model development and data fitting for X-ray scattering data. This package is developed at NSF's ChemMatCARS, Advanced Photon Source.
 
 If you are using this package please use the following acknowledgment line in your publication:
 
