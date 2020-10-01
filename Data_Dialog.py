@@ -147,7 +147,10 @@ class Data_Dialog(QDialog):
         """
         Opens a MetaData Dialog and by accepting the dialog inputs the data to the MetaDataTable
         """
-        
+        try:
+            self.metaDataTableWidget.itemChanged.disconnect()
+        except:
+            pass
         self.metaDialog=MetaData_Dialog()
         if self.metaDialog.exec_():
             name,value=self.metaDialog.parNameLineEdit.text(),self.metaDialog.parValueLineEdit.text()
@@ -160,6 +163,7 @@ class Data_Dialog(QDialog):
                     self.data['meta'][name]=eval(value)
                 except:
                     self.data['meta'][name]=value
+                self.metaDataTableWidget.itemChanged.connect(self.metaDataChanged)
             else:
                 QMessageBox.warning(self,"Parameter Exists","The parameter %s already exists in meta data. Please provide a different parameter name"%name,QMessageBox.Ok)
                 self.addMetaData()
