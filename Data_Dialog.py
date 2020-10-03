@@ -39,6 +39,8 @@ class InsertCol_Dialog(QDialog):
     def __init__(self,colName='Col_X',minCounter=0,maxCounter=100, expr=None,parent=None):
         QDialog.__init__(self,parent)
         loadUi('UI_Forms/InsertCol_Dialog.ui',self)
+        if colName is None:
+            colName='Col_1'
         self.colNameLineEdit.setText(colName)
         if expr is not None:
             self.colExprTextEdit.setText(expr)
@@ -147,6 +149,9 @@ class Data_Dialog(QDialog):
         """
         Opens a MetaData Dialog and by accepting the dialog inputs the data to the MetaDataTable
         """
+        if self.data is None:
+            QMessageBox.warning(self,"Data Error","Please add data first before adding metadata",QMessageBox.Ok)
+            return
         try:
             self.metaDataTableWidget.itemChanged.disconnect()
         except:
@@ -277,7 +282,7 @@ class Data_Dialog(QDialog):
         if self.data is not None:
             row,col=self.data['data'].shape
             if colName is None:
-                colName='Col_%d'%(col)
+                colName='Col_%d'%(col+1)
             self.insertColDialog=InsertCol_Dialog(colName=colName,minCounter=1,maxCounter=row,expr=expr)
             if self.insertColDialog.exec_():
                 imin=eval(self.insertColDialog.minCounterLineEdit.text())
@@ -327,7 +332,6 @@ class Data_Dialog(QDialog):
                         self.resetPlotSetup()
                         self.dataAltered = False
         else:
-            self.data={}
             self.insertColDialog = InsertCol_Dialog(colName=colName, minCounter=1, maxCounter=100, expr=expr)
             if self.insertColDialog.exec_():
                 imin = eval(self.insertColDialog.minCounterLineEdit.text())
@@ -337,6 +341,7 @@ class Data_Dialog(QDialog):
                 expr = self.insertColDialog.colExprTextEdit.toPlainText()
                 expr = expr.replace('col.', "self.data['data']")
                 try:
+                    self.data = {}
                     self.data['data']=pd.DataFrame(eval(expr),columns=[colname])
                     self.data['meta']={}
                     self.data['meta']['col_names']=[colname]

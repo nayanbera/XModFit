@@ -342,9 +342,8 @@ class Ellipsoid_Uniform: #Please put the class name same as the function name
                 dr, rdist, totalR = self.calc_Rdist(tuple(self.__R__), self.Rsig, self.dist, self.Np)
                 self.output_params['Distribution'] = {'x': dr, 'y': rdist}
                 self.output_params['Total'] = {'x': self.x[key], 'y': total}
-                self.output_params['SAXS-term'] = {'x': self.x['SAXS-term'], 'y': sqf['SAXS-term']}
-                self.output_params['Cross-term'] = {'x': self.x['Cross-term'], 'y': sqf['Cross-term']}
-                self.output_params['Resonant-term'] = {'x': self.x['Resonant-term'], 'y': sqf['Resonant-term']}
+                for key in self.x.keys():
+                    self.output_params[key] = {'x': self.x[key], 'y': sqf[key]}
                 self.output_params['rho_r'] = {'x': rhor[:, 0], 'y': rhor[:, 1]}
                 self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1]}
                 self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1]}

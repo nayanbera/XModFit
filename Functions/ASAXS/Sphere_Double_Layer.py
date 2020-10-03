@@ -162,6 +162,7 @@ class Sphere_Double_Layer: #Please put the class name same as the function name
         salt_formula=self.__cf__.parse(salt)
         saltmw=self.__cf__.molecular_weight()
         salt_mole_ratio=self.__cf__.element_mole_ratio()
+        density=np.array(density)
         for i, tR in enumerate(R):
             r2=r1+tR
             mat = material[i].split(':')
@@ -412,9 +413,8 @@ class Sphere_Double_Layer: #Please put the class name same as the function name
                 self.output_params['Distribution'] = {'x': dr, 'y': rdist}
                 self.output_params['Simulated_total_wo_err'] = {'x': self.x[key], 'y': total}
                 self.output_params['Total'] = {'x': self.x[key], 'y': total}
-                self.output_params['SAXS-term'] = {'x': self.x['SAXS-term'], 'y': sqf['SAXS-term']}
-                self.output_params['Cross-term'] = {'x': self.x['Cross-term'], 'y': sqf['Cross-term']}
-                self.output_params['Resonant-term'] = {'x': self.x['Resonant-term'], 'y': sqf['Resonant-term']}
+                for key in self.x.keys():
+                    self.output_params[key] = {'x': self.x[key], 'y': sqf[key]}
                 self.output_params['rho_r'] = {'x': rhor[:, 0], 'y': rhor[:, 1],'names':['r (Angs)','Electron Density (el/Angs^3)']}
                 self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1],'names':['r (Angs)','Electron Density (el/Angs^3)']}
                 self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1]*scale,'names':['r (Angs)','Density (Molar)']}# in Molar
