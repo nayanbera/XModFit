@@ -7,7 +7,7 @@ from functools import lru_cache
 
 sys.path.append(os.path.abspath('.'))
 sys.path.append(os.path.abspath('./Functions'))
-sys.path.append(os.path.abspath('./Fortran_rountines'))
+sys.path.append(os.path.abspath('./Fortran_routines'))
 ####Please do not remove lines above####
 
 ####Import your modules below if needed####
@@ -22,7 +22,7 @@ from functools import lru_cache
 
 
 class Sphere_Double_Layer: #Please put the class name same as the function name
-    def __init__(self, x=0, Np=20, flux=1e13, dist='Gaussian', Energy=None, relement='Au', NrDep=True, norm=1.0e-4,
+    def __init__(self, x=0, Np=20, flux=1e13, dist='Gaussian', Energy=None, relement='Au', NrDep=False, norm=1.0e-4,
                  sbkg=0.0, cbkg=0.0, abkg=0.0, nearIon='Rb', farIon='Cl', ionDensity=0.0, stThickness=1.0,
                  stDensity=0.0, dbLength=1.0, dbDensity=0.0,Ndb=20,Rsig=0.0,D=0.0,phi=0.1,U=-1.0,SF=None,term='Total',
                  mpar={'Layers':{'Material': ['Au', 'H2O'], 'Density': [19.32, 1.0], 'SolDensity': [1.0, 1.0],
@@ -35,7 +35,7 @@ class Sphere_Double_Layer: #Please put the class name same as the function name
         relement    : Resonant element of the nanoparticle. Default: 'Au'
         Energy      : Energy of X-rays in keV at which the form-factor is calculated. Default: None
         Np          : No. of points with which the size distribution will be computed. Default: 10
-        NrDep       : Energy dependence of the non-resonant element. Default= 'True' (Energy Dependent), 'False' (Energy independent)
+        NrDep       : Energy dependence of the non-resonant element. Default= 'False' (Energy independent), 'True' (Energy dependent)
         dist        : The probablity distribution fucntion for the radii of different interfaces in the nanoparticles. Default: Gaussian
         norm        : The density of the nanoparticles in Molar (Moles/Liter)
         sbkg        : Constant incoherent background for SAXS-term

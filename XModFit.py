@@ -1,12 +1,10 @@
-from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QLineEdit, QVBoxLayout, QMessageBox, QCheckBox,\
-    QSpinBox, QComboBox, QListWidget, QDialog, QFileDialog, QProgressBar, QTableWidget, QTableWidgetItem,\
-    QAbstractItemView, QSpinBox, QSplitter, QSizePolicy, QAbstractScrollArea, QHBoxLayout, QTextEdit, QShortcut,\
-    QProgressDialog, QDesktopWidget, QSlider, QTabWidget, QMenuBar, QAction, QMainWindow
-from PyQt5.QtGui import QPalette, QKeySequence, QFont, QDoubleValidator, QIntValidator
+from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QLineEdit, QVBoxLayout, QMessageBox, QCheckBox, \
+    QComboBox, QListWidget, QDialog, QFileDialog, QAbstractItemView, QSplitter, QSizePolicy, QAbstractScrollArea, QHBoxLayout, QTextEdit, QShortcut,\
+    QProgressDialog, QDesktopWidget, QSlider, QTabWidget, QMenuBar, QAction, QTableWidgetSelectionRange
+from PyQt5.QtGui import QKeySequence, QFont, QDoubleValidator, QIntValidator
 from PyQt5.QtCore import Qt, QProcess
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
 import os
 import glob
 import sys
@@ -20,51 +18,50 @@ from Data_Dialog import Data_Dialog
 from importlib import import_module, reload
 from Fit_Routines import Fit
 from tabulate import tabulate
-import lmfit, corner
+import corner
 import numbers
-import time, datetime
+import time
 import shutil
 from FunctionEditor import FunctionEditor
-from lmfit import conf_interval, printfuncs
 from MultiInputDialog import MultiInputDialog
 import traceback
 import pandas as pd
 
 class minMaxDialog(QDialog):
-    def __init__(self,value,vary=False, minimum=None,maximum=None,expr=None,brute_step=None,parent=None,title=None):
-        QDialog.__init__(self,parent)
-        self.value=value
+    def __init__(self, value, vary=0, minimum=None, maximum=None, expr=None, brute_step=None, parent=None, title=None):
+        QDialog.__init__(self, parent)
+        self.value = value
         self.vary = vary
         if minimum is None:
-            self.minimum=-np.inf
+            self.minimum = -np.inf
         else:
-            self.minimum=minimum
+            self.minimum = minimum
         if maximum is None:
-            self.maximum=np.inf
+            self.maximum = np.inf
         else:
-            self.maximum=maximum
-        self.expr=expr
-        self.brute_step=brute_step
+            self.maximum = maximum
+        self.expr = expr
+        self.brute_step = brute_step
         self.createUI()
         if title is not None:
             self.setWindowTitle(title)
         
     def createUI(self):
-        self.vblayout=QVBoxLayout(self)
-        self.layoutWidget=pg.LayoutWidget()
+        self.vblayout = QVBoxLayout(self)
+        self.layoutWidget = pg.LayoutWidget()
         self.vblayout.addWidget(self.layoutWidget)
         
-        valueLabel=QLabel('Value')
+        valueLabel = QLabel('Value')
         self.layoutWidget.addWidget(valueLabel)
         self.layoutWidget.nextColumn()
-        self.valueLineEdit=QLineEdit(str(self.value))
+        self.valueLineEdit = QLineEdit(str(self.value))
         self.layoutWidget.addWidget(self.valueLineEdit)
 
         self.layoutWidget.nextRow()
-        varyLabel=QLabel('Fit')
+        varyLabel = QLabel('Fit')
         self.layoutWidget.addWidget(varyLabel)
         self.layoutWidget.nextColumn()
-        self.varyCheckBox=QCheckBox()
+        self.varyCheckBox = QCheckBox()
         self.layoutWidget.addWidget(self.varyCheckBox)
         if self.vary>0:
             self.varyCheckBox.setCheckState(Qt.Checked)
@@ -72,50 +69,50 @@ class minMaxDialog(QDialog):
             self.varyCheckBox.setCheckState(Qt.Unchecked)
 
         self.layoutWidget.nextRow()
-        minLabel=QLabel('Minimum')
+        minLabel = QLabel('Minimum')
         self.layoutWidget.addWidget(minLabel)
         self.layoutWidget.nextColumn()
-        self.minimumLineEdit=QLineEdit(str(self.minimum))
+        self.minimumLineEdit = QLineEdit(str(self.minimum))
         self.layoutWidget.addWidget(self.minimumLineEdit)
         
         self.layoutWidget.nextRow()
-        maxLabel=QLabel('Maximum')
+        maxLabel = QLabel('Maximum')
         self.layoutWidget.addWidget(maxLabel)
         self.layoutWidget.nextColumn()
-        self.maximumLineEdit=QLineEdit(str(self.maximum))
+        self.maximumLineEdit = QLineEdit(str(self.maximum))
         self.layoutWidget.addWidget(self.maximumLineEdit)
         
         self.layoutWidget.nextRow()
-        exprLabel=QLabel('Expr')
+        exprLabel = QLabel('Expr')
         self.layoutWidget.addWidget(exprLabel)
         self.layoutWidget.nextColumn()
-        self.exprLineEdit=QLineEdit(str(self.expr))
+        self.exprLineEdit = QLineEdit(str(self.expr))
         self.layoutWidget.addWidget(self.exprLineEdit)
         
         self.layoutWidget.nextRow()
-        bruteStepLabel=QLabel('Brute step')
+        bruteStepLabel = QLabel('Brute step')
         self.layoutWidget.addWidget(bruteStepLabel)
         self.layoutWidget.nextColumn()
-        self.bruteStepLineEdit=QLineEdit(str(self.brute_step))
+        self.bruteStepLineEdit = QLineEdit(str(self.brute_step))
         self.layoutWidget.addWidget(self.bruteStepLineEdit)
         
         self.layoutWidget.nextRow()
-        self.cancelButton=QPushButton('Cancel')
+        self.cancelButton = QPushButton('Cancel')
         self.cancelButton.clicked.connect(self.cancelandClose)
         self.layoutWidget.addWidget(self.cancelButton)
         self.layoutWidget.nextColumn()
-        self.okButton=QPushButton('OK')
+        self.okButton = QPushButton('OK')
         self.okButton.clicked.connect(self.okandClose)
         self.layoutWidget.addWidget(self.okButton)
         self.okButton.setDefault(True)
         
     def okandClose(self):
         # try:
-        self.value=float(self.valueLineEdit.text())
+        self.value = float(self.valueLineEdit.text())
         if self.varyCheckBox.checkState() == Qt.Checked:
-            self.vary=1
+            self.vary = 1
         else:
-            self.vary=0
+            self.vary = 0
         if self.minimumLineEdit.text().replace('.','',1).isdigit() or 'inf' in self.minimumLineEdit.text():
             self.minimum=float(self.minimumLineEdit.text())
         else:
@@ -133,12 +130,12 @@ class minMaxDialog(QDialog):
             return
 
         self.expr=self.exprLineEdit.text()
-        if self.expr!='None':
+        if self.expr != 'None':
             self.vary=0
-        if self.bruteStepLineEdit.text()!='None':
-            self.brute_step=float(self.bruteStepLineEdit.text())
+        if self.bruteStepLineEdit.text() != 'None':
+            self.brute_step = float(self.bruteStepLineEdit.text())
         else:
-            self.brute_step=None
+            self.brute_step = None
         self.accept()
         # except:
         #     QMessageBox.warning(self,'Value Error','Value, Min, Max should be floating point numbers\n\n'+traceback.format_exc(),QMessageBox.Ok)
@@ -402,7 +399,7 @@ class XModFit(QWidget):
     def removeCategory(self):
         self.funcListWidget.clear()
         if len(self.categoryListWidget.selectedItems())==1:
-            ans=QMessageBox.question(self,'Delete warning','Are you sure you would like to delete the category?',\
+            ans=QMessageBox.question(self,'Delete warning','Are you sure you would like to delete the category?',
                                      QMessageBox.No,QMessageBox.Yes)
             if ans==QMessageBox.Yes:
                 category=os.path.abspath('./Functions/%s'%self.categoryListWidget.currentItem().text())
@@ -435,11 +432,15 @@ class XModFit(QWidget):
             self.funcEditor.closeEditorButton.clicked.connect(self.postAddFunction)
                 
     def addFunction(self):
-        dirName=os.path.abspath('./Functions/%s'%self.categoryListWidget.currentItem().text())
-        self.funcEditor=FunctionEditor(dirName=dirName)
-        self.funcEditor.setWindowTitle('Function editor')
-        self.funcEditor.show()
-        self.funcEditor.closeEditorButton.clicked.connect(self.postAddFunction)
+        if len(self.categoryListWidget.selectedItems())==1:
+            dirName=os.path.abspath('./Functions/%s'%self.categoryListWidget.currentItem().text())
+            self.funcEditor=FunctionEditor(dirName=dirName)
+            self.funcEditor.setWindowTitle('Function editor')
+            self.funcEditor.show()
+            self.funcEditor.closeEditorButton.clicked.connect(self.postAddFunction)
+        else:
+            QMessageBox.warning(self,'Category Error','Please select a Category first',QMessageBox.Ok)
+
         
         
     def postAddFunction(self):
@@ -463,7 +464,7 @@ class XModFit(QWidget):
     
     def removeFunction(self):
         if len(self.funcListWidget.selectedItems())==1:
-            ans=QMessageBox.question(self,'Warning','Are you sure you would like to remove the function',\
+            ans=QMessageBox.question(self,'Warning','Are you sure you would like to remove the function',
                                      QMessageBox.No,QMessageBox.Yes)
             if ans==QMessageBox.Yes:
                 dirName=os.path.abspath('./Functions/%s'%self.categoryListWidget.currentItem().text())
@@ -742,7 +743,7 @@ class XModFit(QWidget):
                                 self.fit.result.params[key].stderr = 0.0
                             self.sfitParamTableWidget.item(row, 1).setToolTip(
                                 (key + ' = ' + self.format + ' \u00B1 ' + self.format) % \
-                                (self.fit.result.params[key].value, \
+                                (self.fit.result.params[key].value,
                                  self.fit.result.params[key].stderr))
                         except:
                             pass
@@ -759,7 +760,7 @@ class XModFit(QWidget):
                                     self.fit.result.params[key].stderr = 0.0
                                 self.mfitParamTableWidget[mkey].item(row, col).setToolTip(
                                     (key + ' = ' + self.format + ' \u00B1 ' + self.format) % \
-                                    (self.fit.result.params[key].value, \
+                                    (self.fit.result.params[key].value,
                                      self.fit.result.params[key].stderr))
                         self.mfitParamTableWidget[mkey].resizeRowsToContents()
                         self.mfitParamTableWidget[mkey].resizeColumnsToContents()
@@ -786,12 +787,13 @@ class XModFit(QWidget):
                         header+='x \t y\t yerr \t yfit\n'
                         if type(self.fit.x)==dict:
                             for key in self.fit.x.keys():
-                                fitdata=np.vstack((self.fit.x[key][self.fit.imin[key]:self.fit.imax[key]+1],self.fit.y[key][self.fit.imin[key]:self.fit.imax[key]+1],\
+                                fitdata=np.vstack((self.fit.x[key][self.fit.imin[key]:self.fit.imax[key]+1],
+                                                   self.fit.y[key][self.fit.imin[key]:self.fit.imax[key]+1],
                                                    self.fit.yerr[key][self.fit.imin[key]:self.fit.imax[key]+1],self.fit.yfit[key])).T
                                 np.savetxt(ofname+'_'+key+'_fit.txt',fitdata,header=header,comments='#')
                         else:
                             fitdata = np.vstack((self.fit.x[self.fit.imin:self.fit.imax + 1],
-                                                 self.fit.y[self.fit.imin:self.fit.imax + 1], \
+                                                 self.fit.y[self.fit.imin:self.fit.imax + 1],
                                                  self.fit.yerr[self.fit.imin:self.fit.imax + 1],
                                                  self.fit.yfit)).T
                             np.savetxt(ofname + '_fit.txt', fitdata, header=header, comments='#')
@@ -1147,7 +1149,13 @@ class XModFit(QWidget):
         
         self.mfitparamLayoutWidget=pg.LayoutWidget()
         mfitParamLabel=QLabel('Mutiple fitting parameters')
-        self.mfitparamLayoutWidget.addWidget(mfitParamLabel,col=0)
+        self.mfitparamLayoutWidget.addWidget(mfitParamLabel,col=0, colspan=3)
+
+        self.mfitparamLayoutWidget.nextRow()
+        self.mfitParamCoupledCheckBox=QCheckBox('Coupled')
+        self.mfitParamCoupledCheckBox.setEnabled(False)
+        self.mfitParamCoupledCheckBox.stateChanged.connect(self.mfitParamCoupledCheckBoxChanged)
+        self.mfitparamLayoutWidget.addWidget(self.mfitParamCoupledCheckBox,col=0)
         self.add_mpar_button=QPushButton('Add')
         self.add_mpar_button.clicked.connect(self.add_mpar)
         self.add_mpar_button.setDisabled(True)
@@ -1357,9 +1365,80 @@ class XModFit(QWidget):
             self.fit.fit_params[key].set(value=value,vary=vary,min=minimum,max=maximum,expr=expr,brute_step=brute_step)
             if ovalue!=value:
                 self.update_plot()
-        
-        
+
+
+    def mfitParamCoupledCheckBoxChanged(self):
+        if self.mfitParamCoupledCheckBox.isChecked() and self.mfitParamTabWidget.count()>1:
+            mparRowCounts=[self.mfitParamTableWidget[self.mfitParamTabWidget.tabText(i)].rowCount() for i in range(self.mfitParamTabWidget.count())]
+            if not all(x == mparRowCounts[0] for x in mparRowCounts):
+                cur_index=self.mfitParamTabWidget.currentIndex()
+                cur_key=self.mfitParamTabWidget.tabText(cur_index)
+                for i in range(self.mfitParamTabWidget.count()):
+                    if i != cur_index:
+                        mkey=self.mfitParamTabWidget.tabText(i)
+                        try:
+                            self.mfitParamTableWidget[mkey].cellChanged.disconnect()
+                        except:
+                            pass
+                        rowCount=self.mfitParamTableWidget[mkey].rowCount()
+                        self.mfitParamTabWidget.setCurrentIndex(i)
+                        if rowCount>mparRowCounts[cur_index]:
+                            self.mfitParamTableWidget[mkey].clearSelection()
+                            self.mfitParamTableWidget[mkey].setRangeSelected(
+                                QTableWidgetSelectionRange(mparRowCounts[cur_index],0,rowCount-1,0),True)
+                            self.remove_uncoupled_mpar()
+                        elif rowCount<mparRowCounts[cur_index]:
+                            for j in range(rowCount,mparRowCounts[cur_index]):
+                                self.mfitParamTableWidget[mkey].clearSelection()
+                                self.mfitParamTableWidget[mkey].setCurrentCell(j-1,0)
+                                self.add_uncoupled_mpar()
+                        self.mfitParamTableWidget[mkey].setSelectionBehavior(QAbstractItemView.SelectItems)
+                self.mfitParamTabWidget.setCurrentIndex(cur_index)
+
     def add_mpar(self):
+        if self.mfitParamCoupledCheckBox.isChecked() and self.mfitParamTabWidget.count()>1:
+            self.add_coupled_mpar()
+        else:
+            self.add_uncoupled_mpar()
+        self.update_plot()
+        self.remove_mpar_button.setEnabled(True)
+
+    def remove_mpar(self):
+        if self.mfitParamCoupledCheckBox.isChecked() and self.mfitParamTabWidget.count()>1:
+            self.remove_coupled_mpar()
+        else:
+            self.remove_uncoupled_mpar()
+        self.update_plot()
+
+    def add_coupled_mpar(self):
+        cur_index=self.mfitParamTabWidget.currentIndex()
+        mkey = self.mfitParamTabWidget.tabText(cur_index)
+        if len(self.mfitParamTableWidget[mkey].selectedItems())!=0:
+            curRow=self.mfitParamTableWidget[mkey].currentRow()
+            for i in range(self.mfitParamTabWidget.count()):
+                self.mfitParamTabWidget.setCurrentIndex(i)
+                tkey=self.mfitParamTabWidget.tabText(i)
+                self.mfitParamTableWidget[tkey].clearSelection()
+                self.mfitParamTableWidget[tkey].setCurrentCell(curRow,0)
+                self.add_uncoupled_mpar()
+        self.mfitParamTabWidget.setCurrentIndex(cur_index)
+
+    def remove_coupled_mpar(self):
+        cur_index=self.mfitParamTabWidget.currentIndex()
+        mkey = self.mfitParamTabWidget.tabText(cur_index)
+        selRows = list(set([item.row() for item in self.mfitParamTableWidget[mkey].selectedItems()]))
+        if len(selRows) != 0:
+            for i in range(self.mfitParamTabWidget.count()):
+                self.mfitParamTabWidget.setCurrentIndex(i)
+                tkey=self.mfitParamTabWidget.tabText(i)
+                self.mfitParamTableWidget[tkey].clearSelection()
+                self.mfitParamTableWidget[tkey].setRangeSelected(
+                    QTableWidgetSelectionRange(selRows[0], 0, selRows[-1], 0), True)
+                self.remove_uncoupled_mpar()
+        self.mfitParamTabWidget.setCurrentIndex(cur_index)
+
+        
+    def add_uncoupled_mpar(self):
         mkey=self.mfitParamTabWidget.tabText(self.mfitParamTabWidget.currentIndex())
         try:
             self.mfitParamTableWidget[mkey].cellChanged.disconnect()
@@ -1399,17 +1478,6 @@ class XModFit(QWidget):
                             item.setCheckState(Qt.Unchecked)
                         item.setToolTip((key+' = '+self.format+' \u00B1 '+self.format) % \
                                                                 (self.fit.fit_params[key].value, 0.0))
-                    # fvals=[self.fit.fit_params['__%s__%03d'%(parkey,row)].vary for row in range(NRows-1)]
-                    # minvals = [self.fit.fit_params['__%s__%03d'%(parkey,row)].min for row in range(NRows - 1)]
-                    # maxvals = [self.fit.fit_params['__%s__%03d'%(parkey,row)].max for row in range(NRows - 1)]
-                    # exprvals= [self.fit.fit_params['__%s__%03d'%(parkey,row)].expr for row in range(NRows - 1)]
-                    # bsvals = [self.fit.fit_params['__%s__%03d'%(parkey,row)].brute_step for row in range(NRows - 1)]
-                    # for row in range(curRow+1,NRows):# This is to keep intact the fitting flag of the rest of the parameters
-                    #     key='__%s__%03d'%(parkey,row)
-                    #     self.fit.fit_params[key].set(vary=fvals[row-1], min=minvals[row-1],max=maxvals[row-1],
-                    #                                  expr=exprvals[row-1],brute_step=bsvals[row-1])
-                    # key = '__%s__%03d' % (parkey, curRow)
-                    # self.fit.fit_params[key].set(min=minvals[curRow],max=maxvals[curRow],expr=exprvals[curRow],brute_step=bsvals[curRow])
                     # This is to make the newly inserted row checkable
                     item = self.mfitParamTableWidget[mkey].item(curRow, col)
                     item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable)
@@ -1426,24 +1494,24 @@ class XModFit(QWidget):
                     item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable)
                 self.fit.params['__mpar__'][mkey][pkey].insert(curRow, self.mfitParamData[mkey][curRow][col])
             #self.update_mfit_parameters()
-            self.update_plot()
-            self.remove_mpar_button.setEnabled(True)
+            # self.update_plot()
+            # self.remove_mpar_button.setEnabled(True)
         else:
             QMessageBox.warning(self,'Warning','Please select a row at which you would like to add a set of parameters',QMessageBox.Ok)
         self.mfitParamTableWidget[mkey].cellChanged.connect(self.mfitParamChanged_new)
             
-    def remove_mpar(self):
+    def remove_uncoupled_mpar(self):
         mkey = self.mfitParamTabWidget.tabText(self.mfitParamTabWidget.currentIndex())
         selrows=list(set([item.row() for item in self.mfitParamTableWidget[mkey].selectedItems()]))
         num=self.mfitParamTableWidget[mkey].rowCount()-len(selrows)
         if num<self.mpar_N[mkey]:
             QMessageBox.warning(self,'Selection error','The minimum number of rows required for this function to work is %d.\
-             You can only remove %d rows'%(self.mpar_N,num),QMessageBox.Ok)
+             You can only remove %d rows'%(self.mpar_N[mkey],num),QMessageBox.Ok)
             return
-        if self.mfitParamTableWidget[mkey].rowCount()-1 in selrows:
-            QMessageBox.warning(self, 'Selection error',
-                                'Cannot remove the last row. Please select the rows other than the last row', QMessageBox.Ok)
-            return
+        # if self.mfitParamTableWidget[mkey].rowCount()-1 in selrows:
+        #     QMessageBox.warning(self, 'Selection error',
+        #                         'Cannot remove the last row. Please select the rows other than the last row', QMessageBox.Ok)
+        #     return
         try:
             self.mfitParamTableWidget[mkey].cellChanged.disconnect()
         except:
@@ -1480,7 +1548,7 @@ class XModFit(QWidget):
         else:
             QMessageBox.warning(self,'Nothing selected','No item is selected for removal',QMessageBox.Ok)
         self.mfitParamTableWidget[mkey].cellChanged.connect(self.mfitParamChanged_new)
-        self.update_plot()
+        # self.update_plot()
         if self.mfitParamTableWidget[mkey].rowCount()==self.mpar_N[mkey]:
             self.remove_mpar_button.setDisabled(True)
             
@@ -1666,6 +1734,7 @@ class XModFit(QWidget):
                                 self.fit.fit_params[parname].set(brute_step=str(parbrute))
 
                     if mfline is not None:
+                        self.mfitParamCoupledCheckBox.setEnabled(True)
                         for line in lines[mfline:]:
                             tlist=line.strip().split('\t')
                             if len(tlist)>2:
@@ -1681,7 +1750,7 @@ class XModFit(QWidget):
                                 try:
                                     self.fit.fit_params.set(value=float(parval),vary=int(parfit),min=float(parmin),max=float(parmax),expr=expr,brute_step=brute_step)
                                 except:
-                                    self.fit.fit_params.add(parname,value=float(parval),vary=int(parfit),min=float(parmin),\
+                                    self.fit.fit_params.add(parname,value=float(parval),vary=int(parfit),min=float(parmin),
                                                             max=float(parmax),expr=expr,brute_step=brute_step)
                                 mkey, pkey, num = parname[2:].split('_')
                                 num = int(num)
@@ -1794,6 +1863,7 @@ class XModFit(QWidget):
             self.gen_param_items=[]
             self.curr_module=self.funcListWidget.currentItem().text()
             module='Functions.%s.%s'%(self.curr_category,self.curr_module)
+            self.mfitParamCoupledCheckBox.setEnabled(False)
             try:
                 if module not in sys.modules:
                     self.curr_funcClass[module]=import_module(module)
@@ -1898,9 +1968,9 @@ class XModFit(QWidget):
         tpdata=[]
         for key in self.fit.fit_params.keys():
             if key[:2]!='__':
-                tpdata.append((key,self.fit.fit_params[key].value,self.fit.fit_params[key].min,\
+                tpdata.append((key,self.fit.fit_params[key].value,self.fit.fit_params[key].min,
                                self.fit.fit_params[key].max,str(self.fit.fit_params[key].expr),self.fit.fit_params[key].brute_step))
-        self.fitParamData=np.array(tpdata,dtype=[('Params',object),('Value',object),('Min',object),('Max',object),\
+        self.fitParamData=np.array(tpdata,dtype=[('Params',object),('Value',object),('Min',object),('Max',object),
                                                  ('Expr',object),('Brute step',float)])
         self.sfitParamTableWidget.setData(self.fitParamData)
         self.sfitParamTableWidget.setFormat(self.format,column=1)
@@ -1921,6 +1991,8 @@ class XModFit(QWidget):
     def update_mfit_parameters_new(self):
         self.mfitParamTabWidget.currentChanged.disconnect()
         if '__mpar__' in self.fit.params.keys() and self.fit.params['__mpar__']!={}:
+            self.mfitParamCoupledCheckBox.setEnabled(True)
+            self.mfitParamCoupledCheckBox.setCheckState(Qt.Unchecked)
             self.mfitParamTableWidget = {}
             self.mfitParamData = {}
             mkeys=list(self.fit.params['__mpar__'].keys())
@@ -1931,6 +2003,7 @@ class XModFit(QWidget):
                     pass
             for mkey in mkeys:
                 self.mfitParamTableWidget[mkey] = pg.TableWidget(sortable=False)
+                #self.mfitParamTableWidget[mkey].setSelectionBehavior(QAbstractItemView.SelectRows)
                 self.mfitParamTableWidget[mkey].cellClicked.connect(self.update_mfitSlider)
                 self.mfitParamTableWidget[mkey].cellDoubleClicked.connect(self.mparDoubleClicked)
                 self.mfitParamTabWidget.addTab(self.mfitParamTableWidget[mkey],mkey)
@@ -2106,12 +2179,14 @@ class XModFit(QWidget):
             if col!=0:
                 float(txt) # This is for checking the numbers entered to be float or not
                 oldval = self.fit.fit_params[key].value
-                if float(txt)!=self.fit.fit_params[key].value:
-                    pchanged=True
-                    self.mfitParamTableWidget[mkey].item(row,col).setText(self.format%(float(txt)))
-                else:
-                    self.mfitParamTableWidget[mkey].item(row, col).setText(self.format % (float(txt)))
-                    pchanged=False
+                self.mfitParamTableWidget[mkey].item(row, col).setText(self.format % (float(txt)))
+                pchanged=True
+                # if float(txt)!=self.fit.fit_params[key].value:
+                #     pchanged=True
+                #     self.mfitParamTableWidget[mkey].item(row,col).setText(self.format%(float(txt)))
+                # else:
+                #     self.mfitParamTableWidget[mkey].item(row, col).setText(self.format % (float(txt)))
+                #     pchanged=False
                 self.fit.fit_params[key].set(value=float(txt))
                 if self.mfitParamTableWidget[mkey].item(row,col).checkState()==Qt.Checked:
                     self.fit.fit_params[key].set(vary=1)
@@ -2244,12 +2319,12 @@ class XModFit(QWidget):
                     pfnames=[]
                 if type(self.fit.x)==dict:
                     for key in self.fit.x.keys():
-                        self.plotWidget.add_data(x=self.fit.x[key][self.fit.imin[key]:self.fit.imax[key] + 1], y=self.fit.yfit[key], \
-                                         name=self.funcListWidget.currentItem().text()+':'+key, fit=True)
+                        self.plotWidget.add_data(x=self.fit.x[key][self.fit.imin[key]:self.fit.imax[key] + 1], y=self.fit.yfit[key],
+                                                 name=self.funcListWidget.currentItem().text()+':'+key, fit=True)
                     pfnames = pfnames + [self.funcListWidget.currentItem().text() + ':' + key for key in
                                              self.fit.x.keys()]
                 else:
-                    self.plotWidget.add_data(x=self.fit.x[self.fit.imin:self.fit.imax + 1], y=self.fit.yfit, \
+                    self.plotWidget.add_data(x=self.fit.x[self.fit.imin:self.fit.imax + 1], y=self.fit.yfit,
                                              name=self.funcListWidget.currentItem().text(), fit=True)
                     pfnames = pfnames + [self.funcListWidget.currentItem().text()]
 
@@ -2299,6 +2374,7 @@ class XModFit(QWidget):
         except:
             pfnames=[]
         self.chisqr='None'
+        self.red_chisqr='None'
         if len(self.dataListWidget.selectedItems()) > 0:
             if len(self.data[self.sfnames[-1]].keys()) > 1:
                 x = {}
@@ -2328,8 +2404,15 @@ class XModFit(QWidget):
                 self.fit.yfit = self.fit.func.x
             if len(self.dataListWidget.selectedItems()) > 0:
                 self.fit.set_x(x, y=y, yerr=yerr)
-                residual = self.fit.residual(self.fit.fit_params, self.fitScaleComboBox.currentText())
-                self.chisqr = np.sum(residual ** 2)
+                try:
+                    residual = self.fit.residual(self.fit.fit_params, self.fitScaleComboBox.currentText())
+                    self.chisqr = np.sum(residual ** 2)
+                    vary=[self.fit.fit_params[key].vary for key in self.fit.fit_params.keys()]
+                    self.red_chisqr=self.chisqr/(len(residual)-np.sum(vary))
+                except:
+                    QMessageBox.warning(self, 'Evaluation Error', traceback.format_exc(), QMessageBox.Ok)
+                    self.chisqr=None
+                    self.red_chisqr=None
 
             try:
                 self.genParamListWidget.itemSelectionChanged.disconnect()
@@ -2344,6 +2427,7 @@ class XModFit(QWidget):
                 self.fitResultsListWidget.clear()
             self.genParamListWidget.clear()
             self.fit.params['output_params']['scaler_parameters']['Chi-Sqr'] = self.chisqr
+            self.fit.params['output_params']['scaler_parameters']['Red_Chi_Sqr'] = self.red_chisqr
             if len(self.fit.params['output_params'])>0:
                 for key in self.fit.params['output_params'].keys():
                     if key=='scaler_parameters':
@@ -2365,12 +2449,12 @@ class XModFit(QWidget):
             self.genParamListWidget.itemSelectionChanged.connect(self.plot_extra_param)
             if type(self.fit.x)==dict:
                 for key in self.fit.x.keys():
-                    self.plotWidget.add_data(x=self.fit.x[key][self.fit.imin[key]:self.fit.imax[key] + 1], y=self.fit.yfit[key], \
-                                     name=self.funcListWidget.currentItem().text()+':'+key, fit=True)
+                    self.plotWidget.add_data(x=self.fit.x[key][self.fit.imin[key]:self.fit.imax[key] + 1], y=self.fit.yfit[key],
+                                             name=self.funcListWidget.currentItem().text()+':'+key, fit=True)
                 pfnames = pfnames + [self.funcListWidget.currentItem().text() + ':' + key for key in
                                          self.fit.x.keys()]
             else:
-                self.plotWidget.add_data(x=self.fit.x[self.fit.imin:self.fit.imax + 1], y=self.fit.yfit, \
+                self.plotWidget.add_data(x=self.fit.x[self.fit.imin:self.fit.imax + 1], y=self.fit.yfit,
                                          name=self.funcListWidget.currentItem().text(), fit=True)
                 pfnames=pfnames+[self.funcListWidget.currentItem().text()]
         self.plotWidget.Plot(pfnames)

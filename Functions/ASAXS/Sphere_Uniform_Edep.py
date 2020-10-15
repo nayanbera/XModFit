@@ -5,7 +5,7 @@ import sys
 import os
 sys.path.append(os.path.abspath('.'))
 sys.path.append(os.path.abspath('./Functions'))
-sys.path.append(os.path.abspath('./Fortran_rountines'))
+sys.path.append(os.path.abspath('./Fortran_routines'))
 from functools import lru_cache
 ####Please do not remove lines above####
 
@@ -17,7 +17,7 @@ from utils import find_minmax, calc_rho
 
 
 class Sphere_Uniform_Edep: #Please put the class name same as the function name
-    def __init__(self, x=0, Np=20, flux=1e13, bkg=0.0,dist='Gaussian', relement='Au', Energy=None, NrDep='True', norm=1.0,
+    def __init__(self, x=0, Np=20, flux=1e13, bkg=0.0,dist='Gaussian', relement='Au', Energy=None, NrDep='False', norm=1.0,
                  D=1.0, phi=0.1, U=-1.0, SF='None',Rsig=0.0,term='Total',
                  mpar={'Multilayers':{'Material':['Au','H2O'],'Density':[19.32,1.0],'SolDensity':[1.0,1.0],'Rmoles':[1.0,0.0],'R':[1.0,0.0]}}):
         """
@@ -29,7 +29,7 @@ class Sphere_Uniform_Edep: #Please put the class name same as the function name
         relement    : Resonant element of the nanoparticle. Default: 'Au'
         Np          : No. of points with which the size distribution will be computed. Default: 10
         Energy      : Energy of the X-rays
-        NrDep       : Energy dependence of the non-resonant element. Default= 'True' (Energy Dependent), 'False' (Energy independent)
+        NrDep       : Energy dependence of the non-resonant element. Default= 'False' (Energy independent), 'True' (Energy dependent)
         dist        : The probablity distribution fucntion for the radii of different interfaces in the nanoparticles. Default: Gaussian
         norm        : The density of the nanoparticles in Molar (Moles/Liter)
         flux        : Total X-ray flux to calculate the errorbar to simulate the errorbar for the fitted data

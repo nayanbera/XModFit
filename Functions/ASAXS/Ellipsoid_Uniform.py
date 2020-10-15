@@ -21,7 +21,7 @@ import time
 
 class Ellipsoid_Uniform: #Please put the class name same as the function name
     def __init__(self, x=0, Np=10, flux=1e13, term='Total', dist='Gaussian', Energy=None, relement='Au', Nalf=200,
-                 NrDep='True', norm=1.0, Rsig=0.0, sbkg=0.0, cbkg=0.0, abkg=0.0, D=1.0, phi=0.1, U=-1.0,
+                 NrDep='False', norm=1.0, Rsig=0.0, sbkg=0.0, cbkg=0.0, abkg=0.0, D=1.0, phi=0.1, U=-1.0,
                  SF='None', mpar={'Layers':{'Material': ['Au', 'H2O'], 'Density': [19.32, 1.0], 'SolDensity': [1.0, 1.0],
                                   'Rmoles': [1.0, 0.0], 'R': [1.0, 0.0],'RzRatio':[1.0,1.0]}}):
         """
@@ -32,7 +32,7 @@ class Ellipsoid_Uniform: #Please put the class name same as the function name
         relement    : Resonant element of the nanoparticle. Default: 'Au'
         Energy      : Energy of X-rays in keV at which the form-factor is calculated. Default: None
         Np          : No. of points with which the size distribution will be computed. Default: 10
-        NrDep       : Energy dependence of the non-resonant element. Default= 'True' (Energy Dependent), 'False' (Energy independent)
+        NrDep       : Energy dependence of the non-resonant element. Default= 'False' (Energy independent), 'True' (Energy dependent)
         dist        : The probablity distribution fucntion for the radii of different interfaces in the nanoparticles. Default: Gaussian
         Nalf        : Number of azumuthal angle points for angular averaging
         norm        : The density of the nanoparticles in Molar (Moles/Liter)
@@ -314,8 +314,18 @@ class Ellipsoid_Uniform: #Please put the class name same as the function name
                                                                       sol_density=tuple(self.__solDensity__),
                                                                       Energy=self.Energy, Rmoles=tuple(self.__Rmoles__),
                                                                       NrDep=self.NrDep)
-        self.output_params['scaler_parameters']['Diameter (Angstroms)']=2*np.sum(self.__R__)
-        self.output_params['scaler_parameters']['Height (Angstroms)']=2*np.sum(np.array(self.__R__)*np.array(self.__RzRatio__))
+        major=np.sum(self.__R__)
+        minor=np.sum(np.array(self.__R__)*np.array(self.__RzRatio__))
+        self.output_params['scaler_parameters']['Diameter (Angstroms)']=2*major
+        self.output_params['scaler_parameters']['Height (Angstroms)']=2*minor
+        if self.dist=='LogNormal':
+            dstd=2 * np.sqrt((np.exp(self.Rsig**2) - 1) * np.exp(2 * np.log(major) + self.Rsig**2))
+            hstd=2 * np.sqrt((np.exp(self.Rsig**2) - 1) * np.exp(2 * np.log(minor) + self.Rsig**2))
+            self.output_params['scaler_parameters']['Diameter_Std (Angstroms)'] = dstd
+            self.output_params['scaler_parameters']['Height_Std (Angstroms)'] = hstd
+        else:
+            self.output_params['scaler_parameters']['Diameter_Std (Angstroms)'] =2*self.Rsig
+            self.output_params['scaler_parameters']['Height_Std (Angstroms)'] = 2 * self.Rsig*minor/major
         if type(self.x) == dict:
             sqf = {}
             key='SAXS-term'

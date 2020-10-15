@@ -17,7 +17,7 @@ from ff_cylinder import ff_cylinder_ml_asaxs
 from utils import find_minmax, calc_rho, create_steps
 
 class Cylinder_Uniform: #Please put the class name same as the function name
-    def __init__(self, x=0, Np=10, flux=1e13, dist='Gaussian', Energy=None, relement='Au', NrDep='True', H=1.0,
+    def __init__(self, x=0, Np=10, flux=1e13, dist='Gaussian', Energy=None, relement='Au', NrDep='False', H=1.0,
                  Rsig=0.0, norm=1.0, sbkg=0.0, cbkg=0.0, abkg=0.0, D=1.0, phi=0.1, U=-1.0, SF='None',Nalf=200,term='Total',
                  mpar={'Layers': {'Material': ['Au', 'H2O'], 'Density': [19.32, 1.0], 'SolDensity': [1.0, 1.0],
                                   'Rmoles': [1.0, 0.0], 'R': [1.0, 0.0]}}):
@@ -30,7 +30,7 @@ class Cylinder_Uniform: #Please put the class name same as the function name
         Energy      : Energy of X-rays in keV at which the form-factor is calculated. Default: None
         Np          : No. of points with which the size distribution will be computed. Default: 10
         H           : Length of the cylinders in Angs
-        NrDep       : Energy dependence of the non-resonant element. Default= 'True' (Energy Dependent), 'False' (Energy independent)
+        NrDep       : Energy dependence of the non-resonant element. Default= 'False' (Energy independent), 'True' (Energy independent)
         dist        : The probablity distribution fucntion for the radii of different interfaces in the nanoparticles. Default: Gaussian
         Rdist       : Width of distribution or radius and shells of the cylinder
         Nalf        : Number of azumuthal angle points for angular averaging

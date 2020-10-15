@@ -49,7 +49,8 @@ class Parratt_New: #Please put the class name same as the function name
         self.__beta__ = {}
         self.__sig__ = {}
         self.__fit__ = False
-        self.__mkeys__=list(self.__mpar__.keys())
+        self.__mkeys__ = list(self.__mpar__.keys())
+        self.__fix_sig_changed__ = 0
         self.init_params()
 
     def init_params(self):
@@ -125,19 +126,21 @@ class Parratt_New: #Please put the class name same as the function name
         if not self.__fit__:
             for mkey in self.__mpar__.keys():
                 Nlayers = len(self.__mpar__[mkey]['sig'])
-                for i in range(2,Nlayers):
-                    if self.fix_sig:
+                if self.fix_sig:
+                    for i in range(2,Nlayers):
                         self.params['__%s_%s_%03d'%(mkey,'sig',i)].expr='__%s_%s_%03d'%(mkey,'sig',1)
-                    else:
+                    self.__fix_sig_changed__=1
+                if not self.fix_sig and self.__fix_sig_changed__>0:
+                    for i in range(2,Nlayers):
                         self.params['__%s_%s_%03d' % (mkey, 'sig', i)].expr = None
+                    self.__fix_sig_changed__=0
         self.update_parameters()
         mkey=list(self.__mpar__.keys())[0]
         n, z, d, rho, beta = self.calcProfile(self.__d__[mkey], self.__rho__[mkey],
                                                                                 self.__beta__[mkey], self.__sig__[mkey],
                                                                                 mkey)
-        if not self.__fit__:
-            self.output_params['%s_EDP' % self.__mkeys__[0]] = {'x': z, 'y': rho}
-            self.output_params['%s_ADP' % self.__mkeys__[0]] = {'x': z, 'y': beta}
+        self.output_params['%s_EDP' % self.__mkeys__[0]] = {'x': z, 'y': rho}
+        self.output_params['%s_ADP' % self.__mkeys__[0]] = {'x': z, 'y': beta}
         refq, r2 = self.py_parratt(tuple(x), lam, tuple(d), tuple(rho), tuple(beta))
         if self.rrf:
             rhos = (self.params['__%s_rho_000'%(mkey)].value, self.params['__%s_rho_%03d' % (mkey,n - 1)].value)
