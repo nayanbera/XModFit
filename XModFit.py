@@ -254,6 +254,7 @@ class XModFit(QWidget):
         self.gen_param_items=[]
         self.doubleValidator=QDoubleValidator()
         self.intValidator=QIntValidator()
+        self.tApp_Clients={}
         self.fitMethods={'Levenberg-Marquardt':'leastsq',
                          'Scipy-Least-Squares':'least_squares',
                          'Differential-Evolution': 'differential_evolution',
@@ -326,8 +327,15 @@ class XModFit(QWidget):
 
     def launch_tApp(self):
         tname=self.sender().text()
-        self.tApp_Client=QProcess()
-        self.tApp_Client.start('python '+self.toolApps[tname])
+        if tname not in self.tApp_Clients:
+            self.tApp_Clients[tname]=QProcess()
+            self.tApp_Clients[tname].start('python '+self.toolApps[tname])
+        elif self.tApp_Clients[tname].pid()>0:
+            QMessageBox.warning(self,'Running...','The tool %s is already running'%tname,QMessageBox.Ok)
+        else:
+            self.tApp_Clients[tname].start('python ' + self.toolApps[tname])
+
+
 
     def aboutDialog(self):
         QMessageBox.information(self,'About','Copyright (c) NSF\'s ChemMAtCARS, 2020.\n\n'

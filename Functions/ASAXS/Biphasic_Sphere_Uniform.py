@@ -21,8 +21,21 @@ import time
 class Biphasic_Sphere_Uniform: #Please put the class name same as the function name
     def __init__(self, x=0, Np=20, flux=1e13, term='Total',dist='Gaussian', Energy=None, relement='Au', NrDep='False',
                  norm=1.0, sbkg=0.0, cbkg=0.0, abkg=0.0, D=1.0, phi=0.1, U=-1.0, SF='None',Rsig=0.0,
-                 mpar={'Phase_1':{'Material':['Au','H2O'],'Density':[19.32,1.0],'SolDensity':[1.0,1.0],'Rmoles':[1.0,0.0],'R':[1.0,0.0]},
-                       'Phase_2':{'Material':['Au','H2O'],'Density':[19.32,1.0],'SolDensity':[1.0,1.0],'Rmoles':[1.0,0.0],'R':[1.0,0.0]}}):
+                 mpar={'Phase_1':{'Material':['Au','H2O'],
+                                  'Density':[19.32,1.0],
+                                  'VolFrac':[1.0,1.0],
+                                  'Rmoles':[1.0,0.0],
+                                  'R':[1.0,0.0]},
+                       'Phase_2':{'Material':['Au','H2O'],
+                                  'Density':[19.32,1.0],
+                                  'VolFrac':[1.0,1.0],
+                                  'Rmoles':[1.0,0.0],
+                                  'R':[1.0,0.0]},
+                       'Solvent':{'Material':['H2O','H2O'],
+                                  'Density':[1.0,1.0],
+                                  'VolFrac':[1.0,1.0],
+                                  'Rmoles':[1.0,0.0],
+                                  'R':[1.0,0.0]}}):
         """
         Documentation
         Calculates the Energy dependent form factor of multilayered spherical nanoparticles with two different set of materials
@@ -74,8 +87,8 @@ class Biphasic_Sphere_Uniform: #Please put the class name same as the function n
         self.SF=SF
         self.term=term
         self.Rsig=Rsig
-        self.__density__={}
-        self.__sol_density__={}
+        self.__Density__={}
+        self.__VolFrac__={}
         self.__R__={}
         self.__Rmoles__={}
         self.__material__={}
@@ -174,9 +187,9 @@ class Biphasic_Sphere_Uniform: #Please put the class name same as the function n
         for mkey in self.__mkeys__:
             key = 'Density'
             Nmpar=len(self.__mpar__[mkey][key])
-            self.__density__[mkey] = [self.params['__%s_%s_%03d' % (mkey, key, i)].value for i in range(Nmpar)]
-            key = 'SolDensity'
-            self.__sol_density__[mkey] = [self.params['__%s_%s_%03d' % (mkey, key, i)].value for i in range(Nmpar)]
+            self.__Density__[mkey] = [self.params['__%s_%s_%03d' % (mkey, key, i)].value for i in range(Nmpar)]
+            key = 'VolFrac'
+            self.__VolFrac__[mkey] = [self.params['__%s_%s_%03d' % (mkey, key, i)].value for i in range(Nmpar)]
             key = 'Rmoles'
             self.__Rmoles__[mkey] = [self.params['__%s_%s_%03d' % (mkey, key, i)].value for i in range(Nmpar)]
             key = 'R'
@@ -187,6 +200,13 @@ class Biphasic_Sphere_Uniform: #Please put the class name same as the function n
             key='R'
             for i in range(Nmpar):
                 self.params['__%s_%s_%03d'%(mkey,key,i)].set(expr='__%s_%s_%03d'%(self.__mkeys__[0],key,i))
+        mkey = 'Solvent'
+        key = 'VolFrac'
+        for i in range(Nmpar):
+            self.params['__%s_%s_%03d' % (mkey, key, i)].set(
+                expr='1.0-__Phase_1_VolFrac_%03d-__Phase_2_VolFrac_%03d' % (i, i))
+
+
     def y(self):
         """
         Define the function in terms of x to return some value
@@ -194,32 +214,33 @@ class Biphasic_Sphere_Uniform: #Please put the class name same as the function n
         svol = 1.5 * 0.0172 ** 2 / 370 ** 2  # scattering volume in cm^3
         self.output_params = {'scaler_parameters': {}}
         self.update_params()
-        R=self.__R__[self.__mkeys__[0]]
-        rho=np.zeros_like(R)
-        eirho=np.zeros_like(R)
-        adensity=np.zeros_like(R)
+        mkey = 'Solvent'
+        sol_density = tuple(np.ones_like(self.__Density__[mkey]))
+        R = self.__R__[mkey]
+        rho, eirho, adensity, rhor, eirhor, adensityr = calc_rho(R=tuple(R),
+                                                                 material=tuple(self.__material__[mkey]),
+                                                                 relement=self.relement,
+                                                                 density=tuple(self.__Density__[mkey]),
+                                                                 sol_density=sol_density,
+                                                                 Energy=self.Energy,
+                                                                 Rmoles=tuple(self.__Rmoles__[mkey]),
+                                                                 NrDep=self.NrDep)
         for mkey in self.__mkeys__:
-            trho, teirho, tadensity, trhor, teirhor, tadensityr = calc_rho(R=tuple(self.__R__[mkey]),
-                                                                      material=tuple(self.__material__[mkey]),
-                                                                      relement=self.relement,
-                                                                      density=tuple(self.__density__[mkey]),
-                                                                      sol_density=tuple(self.__sol_density__[mkey]),
-                                                                      Energy=self.Energy, Rmoles=tuple(self.__Rmoles__[mkey]),
-                                                                      NrDep=self.NrDep)
-            rho=rho+trho
-            eirho=eirho+teirho
-            adensity=adensity+tadensity
-            try:
-                rhor=rhor+trhor
-                eirhor=eirhor+teirhor
-                adensityr=adensityr+tadensityr
-            except:
-                rhor=trhor
-                eirhor=teirhor
-                adensityr=tadensityr
-        rhor[:,0]=rhor[:,0]/len(R)
-        eirhor[:, 0] = eirhor[:, 0]/len(R)
-        adensityr[:,0]=adensityr[:,0]/len(R)
+            if mkey != 'Solvent':
+                trho, teirho, tadensity, trhor, teirhor, tadensityr = calc_rho(R=tuple(self.__R__[mkey]),
+                                                                               material=tuple(self.__material__[mkey]),
+                                                                               relement=self.relement,
+                                                                               density=tuple(self.__Density__[mkey]),
+                                                                               sol_density=sol_density,
+                                                                               Energy=self.Energy,
+                                                                               Rmoles=tuple(self.__Rmoles__[mkey]),
+                                                                               NrDep=self.NrDep)
+                vf = np.array(self.__VolFrac__[mkey])
+                rho = rho + vf * trho
+                eirho = eirho + vf * teirho
+                adensity = adensity + vf * tadensity
+
+
         if type(self.x) == dict:
             sqf = {}
             for key in self.x.keys():

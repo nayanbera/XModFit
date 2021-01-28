@@ -282,7 +282,7 @@ class Data_Dialog(QDialog):
         if self.data is not None:
             row,col=self.data['data'].shape
             if colName is None:
-                colName='Col_%d'%(col+1)
+                colName='Col_%d'%(col)
             self.insertColDialog=InsertCol_Dialog(colName=colName,minCounter=1,maxCounter=row,expr=expr)
             if self.insertColDialog.exec_():
                 imin=eval(self.insertColDialog.minCounterLineEdit.text())
@@ -473,7 +473,7 @@ class Data_Dialog(QDialog):
             
             
             
-    def readData(self,fname,skiprows=0,comment='#',delimiter=' '):
+    def readData(self,fname,skiprows=0,comment='#',delimiter=r'\s+'):
         """
         Read data from a file and put it in dictionary structure with keys 'meta' and 'data' and the data would look like the following
         data={'meta':meta_dictionary,'data'=pandas_dataframe}
