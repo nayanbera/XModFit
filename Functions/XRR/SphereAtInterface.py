@@ -57,6 +57,7 @@ class SphereAtInterface: #Please put the class name same as the function name
         self.__mpar__ = mpar
         self.choices={'rrf':[True,False]}
         self.__fit__=False
+        self.output_params = {'scaler_parameters': {}}
         self.init_params()
 
 
@@ -120,7 +121,6 @@ class SphereAtInterface: #Please put the class name same as the function name
         """
         Define the function in terms of x to return some value
         """
-        self.output_params = {'scaler_parameters': {}}
         rhos=(self.rho_up,self.rho_down)
         lam=self.lam
         z=np.arange(self.zmin,self.zmax,self.dz)

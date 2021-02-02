@@ -52,6 +52,7 @@ class Parratt_New: #Please put the class name same as the function name
         self.__mkeys__ = list(self.__mpar__.keys())
         self.__fix_sig_changed__ = 0
         self.init_params()
+        self.output_params = {'scaler_parameters': {}}
 
     def init_params(self):
         """
@@ -120,7 +121,6 @@ class Parratt_New: #Please put the class name same as the function name
         """
         Define the function in terms of x to return some value
         """
-        self.output_params = {'scaler_parameters': {}}
         x = self.x + self.qoff
         lam = 6.62607004e-34 * 2.99792458e8 * 1e10 / self.E / 1e3 / 1.60217662e-19
         if not self.__fit__:

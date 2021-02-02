@@ -56,6 +56,7 @@ class MultiSphereAtInterface: #Please put the class name same as the function na
         self.choices={'rrf':[True,False]}
         self.__fit__=False
         self.__mkeys__=list(self.__mpar__.keys())
+        self.output_params = {'scaler_parameters': {}}
         self.init_params()
 
 
@@ -151,7 +152,6 @@ class MultiSphereAtInterface: #Please put the class name same as the function na
         """
         Define the function in terms of x to return some value
         """
-        self.output_params = {'scaler_parameters': {}}
         self.update_parameters()
         z,d,rho=self.calcProfile(self.Rc,self.rhoc,self.rhosh,self.__Z0__,self.__cov__,self.__Z0sig__,self.Tsh,self.rhoup,self.rhodown,
                          self.sig,self.zmin,self.zmax,self.dz)

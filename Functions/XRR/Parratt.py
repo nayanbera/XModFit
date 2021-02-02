@@ -43,6 +43,7 @@ class Parratt: #Please put the class name same as the function name
         self.choices={'rrf':[True,False]}
         self.__fit__=False
         self.__mkeys__=list(self.__mpar__.keys())
+        self.output_params = {'scaler_parameters': {}}
         self.init_params()
 
 
@@ -109,7 +110,6 @@ class Parratt: #Please put the class name same as the function name
         """
         Define the function in terms of x to return some value
         """
-        self.output_params = {'scaler_parameters': {}}
         self.update_parameters()
         mkey=self.__mkeys__[0]
         n,d,rho,beta=self.calcProfile(self.__d__, self.__rho__, self.__beta__, self.__sig__, self.Nlayers)

@@ -75,6 +75,7 @@ class AsymSphere: #Please put the class name same as the function name
         self.choices={'rrf' : [True,False] ,'fix_sig' : [True, False],'coherrent':[True, False]}
         self.__mkeys__=list(self.__mpar__.keys())
         self.__fit__=False
+        self.output_params = {'scaler_parameters': {}}
         self.init_params()
 
 
@@ -222,7 +223,6 @@ class AsymSphere: #Please put the class name same as the function name
         """
         Define the function in terms of x to return some value
         """
-        self.output_params = {'scaler_parameters': {}}
         if not self.__fit__:
             for mkey in self.__mpar__.keys():
                 Nlayers = len(self.__mpar__[mkey]['sig'])

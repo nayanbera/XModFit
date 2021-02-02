@@ -16,7 +16,7 @@ class Sphere:
         Rsig  	: Width of the distribution of solid spheres
         dist  	: Gaussian or LogNormal
         N     	: No. of points on which the distribution will be calculated
-        integ   : The type of integration ('Normal' or 'MonteCarlo') Default: 'Normal'
+        integ   : The type of integration ('Trapizoid' or 'MonteCarlo') Default: 'Trapezoid'
         rhoc  	: Electron density of the particle
         rhosol	: Electron density of the solvent or surrounding environment
         """
@@ -36,7 +36,7 @@ class Sphere:
         self.__mpar__=mpar
         self.choices={'dist':['Gaussian','LogNormal'],'integ':['Trapezoid','MonteCarlo']}
         self.init_params()
-        self.init_params()
+        self.output_params = {'scaler_parameters': {}}
 
     def init_params(self):
         self.params=Parameters()
@@ -48,10 +48,9 @@ class Sphere:
         self.params.add('bkg',value=self.bkg,vary=0,min=-np.inf,max=np.inf,expr=None,brute_step=0.1)
 
     def y(self):
-        self.output_params = {'scaler_parameters': {}}
         rho=self.rhoc-self.rhosol
         if self.Rsig<1e-3:
-            return self.norm*rho**2*(np.sin(self.x*self.R)-self.x*self.R*np.cos(self.x*self.R))**2/self.x**6+self.bkg
+            return self.norm*rho**2*16*np.pi**2*(np.sin(self.x*self.R)-self.x*self.R*np.cos(self.x*self.R))**2/self.x**6+self.bkg
         else:
             if self.integ=='Trapezoid':
                 if self.dist=='Gaussian':
@@ -67,11 +66,11 @@ class Sphere:
                     if type(self.x)==np.ndarray:
                         ffactor=[]
                         for x in self.x:
-                            f=np.sum((np.sin(x*r)-x*r*np.cos(x*r))**2*dist/x**6)
+                            f=np.sum(16*np.pi**2(np.sin(x*r)-x*r*np.cos(x*r))**2*dist/x**6)
                             ffactor.append(f/sumdist)
                         return self.norm*rho**2*np.array(ffactor)+self.bkg
                     else:
-                        return self.norm*rho**2*np.sum((np.sin(self.x*r)-self.x*r*np.cos(self.x*r))**2*dist/self.x**6)/sumdist+self.bkg
+                        return self.norm*rho**2*np.sum(16*np.pi**2*(np.sin(self.x*r)-self.x*r*np.cos(self.x*r))**2*dist/self.x**6)/sumdist+self.bkg
                 elif self.dist=='LogNormal':
                     lgn=LogNormal.LogNormal(x=0.001,pos=self.R,wid=self.Rsig)
                     rmin,rmax=max(0.001, np.exp(np.log(self.R) - 5*self.Rsig)), np.exp(np.log(self.R) + 5*self.Rsig)
@@ -85,11 +84,11 @@ class Sphere:
                     if type(self.x)==np.ndarray:
                         ffactor=[]
                         for x in self.x:
-                            f=np.sum((np.sin(x*r)-x*r*np.cos(x*r))**2*dist/x**6)
+                            f=np.sum(16*np.pi**2*(np.sin(x*r)-x*r*np.cos(x*r))**2*dist/x**6)
                             ffactor.append(f/sumdist)
                         return self.norm*rho**2*np.array(ffactor)+self.bkg
                     else:
-                        return self.norm*rho**2*np.sum((np.sin(self.x*r)-self.x*r*np.cos(self.x*r))**2*dist/self.x**6)/sumdist+self.bkg
+                        return self.norm*rho**2*np.sum(16*np.pi**2*(np.sin(self.x*r)-self.x*r*np.cos(self.x*r))**2*dist/self.x**6)/sumdist+self.bkg
             else:
                 np.random.seed(100)
                 if self.dist == 'Gaussian':
@@ -103,11 +102,11 @@ class Sphere:
                     if type(self.x) == np.ndarray:
                         ffactor = []
                         for x in self.x:
-                            f = np.sum((np.sin(x * r) - x * r * np.cos(x * r)) ** 2 * dist / x ** 6)
+                            f = np.sum(16*np.pi**2*(np.sin(x * r) - x * r * np.cos(x * r)) ** 2 * dist / x ** 6)
                             ffactor.append(f / sumdist)
                         return self.norm * rho ** 2 * np.array(ffactor) + self.bkg
                     else:
-                        return self.norm * rho ** 2 * np.sum((np.sin(self.x * r) - self.x * r * np.cos(
+                        return self.norm * rho ** 2 * 16 * np.pi**2 * np.sum((np.sin(self.x * r) - self.x * r * np.cos(
                             self.x * r)) ** 2 * dist / self.x ** 6) / sumdist + self.bkg
                 elif self.dist == 'LogNormal':
                     r = np.sort(np.random.lognormal(np.log(self.R), self.Rsig,10000))
@@ -121,11 +120,11 @@ class Sphere:
                     if type(self.x) == np.ndarray:
                         ffactor = []
                         for x in self.x:
-                            f = np.sum((np.sin(x * r) - x * r * np.cos(x * r)) ** 2 * dist / x ** 6)
+                            f = 16*np.pi**2*np.sum((np.sin(x * r) - x * r * np.cos(x * r)) ** 2 * dist / x ** 6)
                             ffactor.append(f / sumdist)
                         return self.norm * rho ** 2 * np.array(ffactor) + self.bkg
                     else:
-                        return self.norm * rho ** 2 * np.sum((np.sin(self.x * r) - self.x * r * np.cos(
+                        return self.norm * rho ** 2 * 16*np.pi**2*np.sum((np.sin(self.x * r) - self.x * r * np.cos(
                             self.x * r)) ** 2 * dist / self.x ** 6) / sumdist + self.bkg
 
 if __name__=='__main__':

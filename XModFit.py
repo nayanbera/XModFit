@@ -2414,6 +2414,7 @@ class XModFit(QWidget):
                 self.fit.set_x(x, y=y, yerr=yerr)
                 try:
                     residual = self.fit.residual(self.fit.fit_params, self.fitScaleComboBox.currentText())
+
                     self.chisqr = np.sum(residual ** 2)
                     vary=[self.fit.fit_params[key].vary for key in self.fit.fit_params.keys()]
                     self.red_chisqr=self.chisqr/(len(residual)-np.sum(vary))
@@ -2459,11 +2460,27 @@ class XModFit(QWidget):
                 for key in self.fit.x.keys():
                     self.plotWidget.add_data(x=self.fit.x[key][self.fit.imin[key]:self.fit.imax[key] + 1], y=self.fit.yfit[key],
                                              name=self.funcListWidget.currentItem().text()+':'+key, fit=True)
+                    if len(self.dataListWidget.selectedItems()) > 0:
+                        self.fit.params['output_params']['Residuals_%s' % key] = {
+                            'x': self.fit.x[key][self.fit.imin[key]:self.fit.imax[key] + 1],
+                            'y': (self.fit.y[key][self.fit.imin[key]:self.fit.imax[key] + 1] - self.fit.yfit[key])
+                                 / self.fit.yerr[key][self.fit.imin[key]:self.fit.imax[key] + 1]}
+                    else:
+                        self.fit.params['output_params']['Residuals_%s' % key]={'x':self.fit.x[key][self.fit.imin[key]:self.fit.imax[key] + 1],
+                                                                                'y':np.zeros_like(self.fit.x[key][self.fit.imin[key]:self.fit.imax[key] + 1])}
                 pfnames = pfnames + [self.funcListWidget.currentItem().text() + ':' + key for key in
                                          self.fit.x.keys()]
             else:
                 self.plotWidget.add_data(x=self.fit.x[self.fit.imin:self.fit.imax + 1], y=self.fit.yfit,
                                          name=self.funcListWidget.currentItem().text(), fit=True)
+                if len(self.dataListWidget.selectedItems()) > 0:
+                    self.fit.params['output_params']['Residuals'] = {'x': self.fit.x[self.fit.imin:self.fit.imax + 1],
+                                                                     'y': (self.fit.y[
+                                                                           self.fit.imin:self.fit.imax + 1] - self.fit.yfit) / self.fit.yerr[
+                                                                                                                               self.fit.imin:self.fit.imax + 1]}
+                else:
+                    self.fit.params['output_params']['Residuals'] = {'x': self.fit.x[self.fit.imin:self.fit.imax + 1],
+                                                                     'y':np.zeros_like(self.fit.x[self.fit.imin:self.fit.imax + 1])}
                 pfnames=pfnames+[self.funcListWidget.currentItem().text()]
         self.plotWidget.Plot(pfnames)
         # QApplication.processEvents()
