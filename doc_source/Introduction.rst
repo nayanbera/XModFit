@@ -11,10 +11,10 @@ Some of the commonly used functions are provided under different categories and 
 categories and fitting functions by using an easy to use template within a :ref:`Function_Editor`
 
 
-.. figure:: ./Figures/XModFit_in_Action.png
-    :figwidth: 100%
+    .. figure:: ./Figures/XModFit_in_Action.png
+        :figwidth: 100%
 
-    **XModFit** in action in which a Small Angle X-ray Scattering data is fitted with poly-dispersed **Sphere** model with **Log-Normal** distribution.
+        **XModFit** in action in which a Small Angle X-ray Scattering data is fitted with poly-dispersed **Sphere** model with **Log-Normal** distribution.
 
 
     **Features**
