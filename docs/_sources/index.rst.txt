@@ -12,6 +12,7 @@ Welcome to XModFit's documentation!
 
    Introduction
    Installation
+   Brief_Tutorial
    Acknowledgement
 
 
