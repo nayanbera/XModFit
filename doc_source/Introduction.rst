@@ -11,13 +11,13 @@ Some of the commonly used functions are provided under different categories and 
 categories and fitting functions by using an easy to use template within a :ref:`Function_Editor`
 
 
-    .. figure:: ./Figures/XModFit_in_Action.png
-        :figwidth: 100%
+.. figure:: ./Figures/XModFit_in_Action.png
+    :figwidth: 100%
 
-        **XModFit** in action in which a Small Angle X-ray Scattering data is fitted with poly-dispersed **Sphere** model with **Log-Normal** distribution.
+    **XModFit** in action in which a Small Angle X-ray Scattering data is fitted with poly-dispersed **Sphere** model with **Log-Normal** distribution.
 
-
-    **Features**
+Features
+********
 
     1. Read and fit multiple data sets
     2. Functions are categorized under different types and experimental techniques
@@ -28,7 +28,8 @@ categories and fitting functions by using an easy to use template within a :ref:
     7. Another cool feature of :ref:`XAnoS_Fit` is the ability to view and save other functions/parameters generated during the calculation/evaluation of a user supplied functions.
 
 
-    **Usage**
+Usage
+*****
 
     :ref:`XModFit` can be used as stand-alone python fitting package by running this in terminal::
 
