@@ -1,4 +1,4 @@
-subroutine ff_parallelepiped(q,R,L,ff,M)
+subroutine ff_cylinder(q,R,L,ff,M)
     !***************************************************************************
     !Subroutine to calculate the form factor of cylinder
     !q = Array of reciprocal wave-vectors at which the form-factor needs to be calculated

@@ -2538,8 +2538,8 @@ if __name__=='__main__':
     w.setWindowTitle('XModFit')
     resolution = QDesktopWidget().screenGeometry()
     w.setGeometry(0, 0, resolution.width() - 100, resolution.height() - 100)
-    w.move((resolution.width() / 2) - (w.frameSize().width() / 2),
-              (resolution.height() / 2) - (w.frameSize().height() / 2))
+    w.move(int(resolution.width() / 2) - int(w.frameSize().width() / 2),
+              int(resolution.height() / 2) - int(w.frameSize().height() / 2))
     try:
         fname = sys.argv[1]
         w.addData(fnames=[fname])

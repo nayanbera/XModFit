@@ -2,7 +2,10 @@ import re
 from xraydb import XrayDB
 import sys
 import numpy as np
-from mendeleev import get_table
+try:
+    from mendeleev.fetch import fetch_table
+except:
+    from mendeleev import get_table
 
 
 class Chemical_Formula:
@@ -10,7 +13,10 @@ class Chemical_Formula:
         self.formula = formula
         self.xdb = XrayDB()
         cols = ['symbol', 'covalent_radius_cordero']
-        ptable = get_table('elements')
+        try:
+            ptable=fetch_table('elements')
+        except:
+            ptable = get_table('elements')
         x = ptable[cols]
         self.covalent_radius = x.set_index('symbol').T.to_dict('index')['covalent_radius_cordero']
         if formula is not None:
