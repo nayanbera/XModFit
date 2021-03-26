@@ -11,6 +11,7 @@ Welcome to XModFit's documentation!
    :caption: Contents:
 
    Introduction
+   Installation
    Acknowledgement
 
 
