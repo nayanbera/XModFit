@@ -12,7 +12,7 @@ Simulate an already available function
 --------------------------------------
 The available functions can be simulated by following these steps:
 
-1. In the :ref:`XAnoS_Fit` window go to a **Function** tab
+1. Go to a **Function** tab
 2. Select a categories among the **Function Categories** which will populate the **Functions** lists with functions/models available for that category.
 3. Click on one of the functions which will create a plot the simulated curve in the **Data and Fit** tab and also it will populates the parameter tables in **Parameters** tab with the parameter values required for the functions.
 4. The values of **X-axis** of the simulated curve can be changed by changing the **x** parameter located at the to of the **Parameters** tab.
@@ -20,7 +20,7 @@ The available functions can be simulated by following these steps:
 
 Data Importing and Fitting
 --------------------------
-The main objective of :ref:`XAnoS_Fit` is to provide a user to fit a model/function to a data. Please follow these to perform a data fitting using :ref:`XAnoS_Fit`:
+The main objective of **XModFit** is to provide a user to fit a model/function to a data. Please follow these to perform a data fitting using :ref:`XAnoS_Fit`:
 
 1. Click the **Data** tab.
 2. Import data file(s) by clicking the **Add Files** button which will prompt for selecting the data files.
