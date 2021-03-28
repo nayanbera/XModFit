@@ -33,6 +33,6 @@ Usage
 
     :ref:`XModFit` can be used as stand-alone python fitting package by running this in terminal::
 
-        python XAnoS_Fit.py
+        python XModFit.py
 
     The widget can be used as a widget with any other python application.
