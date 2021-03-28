@@ -63,17 +63,18 @@ class Sphere:
                     self.output_params['Distribution']={'x':r,'y':dist/sumdist}
                     self.output_params['scaler_parameters']['Rmean']=self.R
                     self.output_params['scaler_parameters']['Rwidth']=2.35482*self.Rsig
+                    print(dist)
                     if type(self.x)==np.ndarray:
                         ffactor=[]
                         for x in self.x:
-                            f=np.sum(16*np.pi**2(np.sin(x*r)-x*r*np.cos(x*r))**2*dist/x**6)
+                            f=np.sum(16.0*np.pi**2*(np.sin(x*r)-x*r*np.cos(x*r))**2*dist/x**6)
                             ffactor.append(f/sumdist)
                         return self.norm*rho**2*np.array(ffactor)+self.bkg
                     else:
                         return self.norm*rho**2*np.sum(16*np.pi**2*(np.sin(self.x*r)-self.x*r*np.cos(self.x*r))**2*dist/self.x**6)/sumdist+self.bkg
                 elif self.dist=='LogNormal':
                     lgn=LogNormal.LogNormal(x=0.001,pos=self.R,wid=self.Rsig)
-                    rmin,rmax=max(0.001, np.exp(np.log(self.R) - 5*self.Rsig)), np.exp(np.log(self.R) + 5*self.Rsig)
+                    rmin,rmax=max(0.001, np.exp(np.log(self.R) - 5*self.Rsig)), np.exp(np.log(self.R) + 5.0*self.Rsig)
                     r=np.logspace(np.log10(rmin),np.log10(rmax),self.N)
                     lgn.x=r
                     dist=lgn.y()
@@ -102,7 +103,7 @@ class Sphere:
                     if type(self.x) == np.ndarray:
                         ffactor = []
                         for x in self.x:
-                            f = np.sum(16*np.pi**2*(np.sin(x * r) - x * r * np.cos(x * r)) ** 2 * dist / x ** 6)
+                            f = np.sum(16.0*np.pi**2*(np.sin(x * r) - x * r * np.cos(x * r)) ** 2 * dist / x ** 6)
                             ffactor.append(f / sumdist)
                         return self.norm * rho ** 2 * np.array(ffactor) + self.bkg
                     else:
@@ -114,17 +115,17 @@ class Sphere:
                     dist = lgn.y()
                     sumdist = np.sum(dist)
                     self.output_params['Distribution'] = {'x': r, 'y': dist / sumdist}
-                    self.output_params['scaler_parameters']['Rmean'] = np.exp(np.log(self.R) + self.Rsig ** 2 / 2)
+                    self.output_params['scaler_parameters']['Rmean'] = np.exp(np.log(self.R) + self.Rsig ** 2 / 2.0)
                     self.output_params['scaler_parameters']['Rwidth'] = np.sqrt(
                         (np.exp(self.Rsig ** 2) - 1) * np.exp(2 * np.log(self.R) + self.Rsig ** 2))
                     if type(self.x) == np.ndarray:
                         ffactor = []
                         for x in self.x:
-                            f = 16*np.pi**2*np.sum((np.sin(x * r) - x * r * np.cos(x * r)) ** 2 * dist / x ** 6)
+                            f = 16.0*np.pi**2*np.sum((np.sin(x * r) - x * r * np.cos(x * r)) ** 2 * dist / x ** 6)
                             ffactor.append(f / sumdist)
                         return self.norm * rho ** 2 * np.array(ffactor) + self.bkg
                     else:
-                        return self.norm * rho ** 2 * 16*np.pi**2*np.sum((np.sin(self.x * r) - self.x * r * np.cos(
+                        return self.norm * rho ** 2 * 16.0*np.pi**2*np.sum((np.sin(self.x * r) - self.x * r * np.cos(
                             self.x * r)) ** 2 * dist / self.x ** 6) / sumdist + self.bkg
 
 if __name__=='__main__':
