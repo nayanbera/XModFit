@@ -6,9 +6,7 @@ Introduction
 
     If you are using any components of **XModFit** for your research/work please do not forget to acknowledge (see :ref:`Acknowledgements`).
 
-    **XModFit** provides a platform to simulate and fit a model to 1D data. It uses `LMFIT <https://lmfit.github.io/lmfit-py/>`_ python library for fitting.
-Some of the commonly used functions are provided under different categories and the users can develop their own
-categories and fitting functions by using an easy to use template within a :ref:`Function_Editor`
+    **XModFit** provides a platform to simulate and fit a model to 1D data. It uses `LMFIT <https://lmfit.github.io/lmfit-py/>`_ python library for fitting. Some of the commonly used functions are provided under different categories and the users can develop their own categories and fitting functions by using an easy to use template within a :ref:`Function_Editor`
 
 
 .. figure:: ./Figures/XModFit_in_Action.png
