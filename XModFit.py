@@ -222,6 +222,7 @@ class XModFit(QWidget):
         QWidget.__init__(self,parent)
         self.vblayout=QVBoxLayout(self)
         self.menuBar = QMenuBar(self)
+        self.menuBar.setNativeMenuBar(False)
         self.create_menus()
         self.vblayout.addWidget(self.menuBar,0)
         self.mainDock=DockArea(self,parent)
