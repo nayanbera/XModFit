@@ -45,7 +45,7 @@ def parratt_numba(q,lam,d,rho,beta):
 class AsymSphere: #Please put the class name same as the function name
     def __init__(self,x = 0.1, E = 10.0, R0 = 25.00, rhoc = 4.68, D = 66.6, rhosh = 0.200, h1 = -25.0, h1sig = 0.0, h2 = 3.021,
                  sig = 3.0, cov = 0.901, fix_sig = False,
-                 mpar={'Multilayer':{'Layers':['Top', 'Bottom'], 'd':[0.0,1.0],'rho':[0.0,0.334],'beta':[0.0,0.0],'sig':[0.0,3.00]}},
+                 mpar={'Multilayer':{'Layers':['top', 'bottom'], 'd':[0.0,1.0],'rho':[0.0,0.334],'beta':[0.0,0.0],'sig':[0.0,3.00]}},
                  rrf = True, qoff=0.0,zmin=-120,zmax=120,dz=1,coherrent=False,yscale=1.0,bkg=0.0):
         """
         Calculates X-ray reflectivity from multilayers of core-shell spherical nanoparticles assembled near an interface

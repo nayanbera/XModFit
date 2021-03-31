@@ -36,8 +36,8 @@ def parratt_numba(q,lam,d,rho,beta):
     return ref,r
 
 class Parratt_Biphasic: #Please put the class name same as the function name
-    def __init__(self,x=0.1,E=10.0,mpar={'Phase1':{'Layers':['top','Bottom'],'d':[0.0,1.0],'rho':[0.0,0.333],'beta':[0.0,0.0],'sig':[0.0,3.0]},
-                                         'Phase2':{'Layers':['top','Bottom'],'d':[0.0,1.0],'rho':[0.0,0.333],'beta':[0.0,0.0],'sig':[0.0,3.0]}},
+    def __init__(self,x=0.1,E=10.0,mpar={'Phase1':{'Layers':['top','bottom'],'d':[0.0,1.0],'rho':[0.0,0.333],'beta':[0.0,0.0],'sig':[0.0,3.0]},
+                                         'Phase2':{'Layers':['top','bottom'],'d':[0.0,1.0],'rho':[0.0,0.333],'beta':[0.0,0.0],'sig':[0.0,3.0]}},
                  Minstep=0.5, rrf=True, fix_sig=False, qoff=0.0, yscale=1,cov1=0.5, bkg=0.0, coherrent=True, aveed=True):
         """
         Calculates X-ray reflectivity from a system of multiple layers using Parratt formalism

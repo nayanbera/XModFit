@@ -37,7 +37,7 @@ def parratt_numba(q,lam,d,rho,beta):
 
 class DampedSine: #Please put the class name same as the function name
     def __init__(self, x=0.1, E=10.0, mpar={
-        'Model': {'Layers': ['top', 'Bottom'], 'd': [0.0, 1.0], 'rho': [0.0, 0.333], 'beta': [0.0, 0.0],
+        'Model': {'Layers': ['top', 'bottom'], 'd': [0.0, 1.0], 'rho': [0.0, 0.333], 'beta': [0.0, 0.0],
                    'sig': [0.0, 3.0]}},
                  Minstep=0.5, rrf=True, fix_sig=False, qoff=0.0, yscale=1, amp=0.1, decay_len= 100, spacing= 10, z0=0, bkg=0.0):
         """

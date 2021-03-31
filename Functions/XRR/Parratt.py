@@ -36,7 +36,7 @@ def parratt_numba(q,lam,d,rho,beta):
 
 class Parratt: #Please put the class name same as the function name
     def __init__(self,x=0.1,E=10.0,mpar={'Model':
-                                             {'Layers':['top','Bottom'],'d':[0.0,1.0],'rho':[0.0,0.334],'beta':[0.0,0.0],'sig':[0.0,3.0]}},
+                                             {'Layers':['top','bottom'],'d':[0.0,1.0],'rho':[0.0,0.334],'beta':[0.0,0.0],'sig':[0.0,3.0]}},
     Nlayers=101,rrf=True,qoff=0.0,yscale=1.0,bkg=0.0):
         """
         Calculates X-ray reflectivity from a system of multiple layers using Parratt formalism
