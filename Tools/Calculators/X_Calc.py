@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import re
 import scipy.constants
-from xraydb import XrayDB
+from xraydb_bac import XrayDB
 xdb = XrayDB()
 
 

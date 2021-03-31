@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath('./Fortran_rountines'))
 
 ####Import your modules below if needed####
 import copy
-from xraydb import XrayDB # Need to install xraydb from https://github.com/scikit-beam/XrayDB
+from xraydb_bac import XrayDB # Need to install xraydb_bac from https://github.com/scikit-beam/XrayDB
 from itertools import combinations
 import os
 

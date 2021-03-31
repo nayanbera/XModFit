@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath('./Fortran_rountines'))
 ####Please do not remove lines above####
 
 ####Import your modules below if needed####
-from xraydb import XrayDB
+from xraydb_bac import XrayDB
 #from pyEQL import chemical_formula
 
 

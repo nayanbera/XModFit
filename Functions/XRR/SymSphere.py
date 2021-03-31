@@ -17,8 +17,29 @@ from functools import lru_cache
 ####Please do not remove lines above####
 
 ####Import your modules below if needed####
-from xr_ref import parratt
-
+# from xr_ref import parratt
+from numba import jit
+@jit(nopython=True)
+def parratt_numba(q,lam,d,rho,beta):
+    ref=np.ones_like(q)
+    refc=np.ones_like(q)*complex(1.0,0.0)
+    f1=16.0*np.pi*2.818e-5
+    f2=-32.0*np.pi**2/lam**2
+    for j,q1 in enumerate(q):
+        r=complex(0.0,0.0)
+        for i in range(len(d)-1,0,-1):
+            qc1=f1*(rho[i-1]-rho[0])
+            qc2=f1*(rho[i]-rho[0])
+            k1=np.sqrt(complex(q1**2-qc1,f2*beta[i-1]))
+            k2=np.sqrt(complex(q1**2-qc2,f2*beta[i]))
+            X=(k1-k2)/(k1+k2)
+            fact1=complex(np.cos(k2.real*d[i]),np.sin(k2.real*d[i]))
+            fact2=np.exp(-k2.imag*d[i])
+            fact=fact1*fact2
+            r=(X+r*fact)/(1.0+X*r*fact)
+        ref[j]=np.abs(r)**2
+        refc[j]=r
+    return ref,r
 
 class SymSphere: #Please put the class name same as the function name
     def __init__(self,x = 0.1, E = 10.0, R0 = 25.00, rhoc = 4.68, D = 66.6, rhosh = 0.200, h1 = -25.0, h1sig = 0.0, h2 = 3.021,
@@ -211,7 +232,7 @@ class SymSphere: #Please put the class name same as the function name
 
     @lru_cache(maxsize=10)
     def py_parratt(self, x, lam, d, rho, beta):
-        return parratt(x, lam, d, rho, beta)
+        return parratt_numba(np.array(x), lam, np.array(d), np.array(rho), np.array(beta))
 
     def update_parameters(self):
         mkey = self.__mkeys__[0]

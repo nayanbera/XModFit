@@ -10,8 +10,29 @@ from functools import lru_cache
 ####Please do not remove lines above####
 
 ####Import your modules below if needed####
-from xr_ref import parratt
-
+# from xr_ref import parratt
+from numba import jit
+@jit(nopython=True)
+def parratt_numba(q,lam,d,rho,beta):
+    ref=np.ones_like(q)
+    refc=np.ones_like(q)*complex(1.0,0.0)
+    f1=16.0*np.pi*2.818e-5
+    f2=-32.0*np.pi**2/lam**2
+    for j,q1 in enumerate(q):
+        r=complex(0.0,0.0)
+        for i in range(len(d)-1,0,-1):
+            qc1=f1*(rho[i-1]-rho[0])
+            qc2=f1*(rho[i]-rho[0])
+            k1=np.sqrt(complex(q1**2-qc1,f2*beta[i-1]))
+            k2=np.sqrt(complex(q1**2-qc2,f2*beta[i]))
+            X=(k1-k2)/(k1+k2)
+            fact1=complex(np.cos(k2.real*d[i]),np.sin(k2.real*d[i]))
+            fact2=np.exp(-k2.imag*d[i])
+            fact=fact1*fact2
+            r=(X+r*fact)/(1.0+X*r*fact)
+        ref[j]=np.abs(r)**2
+        refc[j]=r
+    return ref,r
 
 class SphereAtInterface: #Please put the class name same as the function name
     def __init__(self,x=0.1,lam=1.0,Rc=10,Rsig=0.0,rhoc=4.68,D=60.0, cov=100,Zo=20.0,decay=3.0,rho_up=0.333,
@@ -116,6 +137,10 @@ class SphereAtInterface: #Please put the class name same as the function name
         #D=D/2
         return np.where(np.abs(z-z0)<=Rc,(2*np.pi*(rhoc-rhob)*(Rc**2-(z-z0)**2)+1.732*rhob*D**2)/(1.732*D**2),rhob)
 
+    @lru_cache(maxsize=10)
+    def py_parratt(self, x, lam, d, rho, beta):
+        return parratt_numba(np.array(x), lam, np.array(d), np.array(rho), np.array(beta))
+
 
     def y(self):
         """
@@ -130,9 +155,9 @@ class SphereAtInterface: #Please put the class name same as the function name
             self.output_params['EDP']={'x':z,'y':edp}
         beta=np.zeros_like(z)
         rho=np.array(edp,dtype='float')
-        refq,r2=parratt(self.x+self.qoff,lam,d,rho,beta)
+        refq,r2=self.py_parratt(tuple(self.x+self.qoff),lam,tuple(d),tuple(rho),tuple(beta))
         if self.rrf:
-            ref,r2=parratt(self.x,lam,[0.0,1.0],rhos,[0.0,0.0])
+            ref,r2=self.py_parratt(tuple(self.x),lam,tuple([0.0,1.0]),tuple(rhos),tuple([0.0,0.0]))
             refq=refq/ref
         return refq
 
