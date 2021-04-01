@@ -73,11 +73,15 @@ class Sphere_MultiModal:
             if self.dist == 'Gaussian':
                 gau=Gaussian.Gaussian(x = r, pos = self.__R__[i], wid = self.__Rsig__[i])
                 gau.x=r
-                dist = dist + self.__Norm__[i]*gau.y()
+                tdist=self.__Norm__[i]*gau.y()
+                self.output_params[self.__mpar__['Distributions']['Dist'][i]] = {'x':r,'y':tdist/np.sum(tdist)}
+                dist = dist + tdist
             else:
                 lgn=LogNormal.LogNormal(x = r, pos = self.__R__[i], wid = self.__Rsig__[i])
                 lgn.x = r
-                dist = dist + self.__Norm__[i]*lgn.y()
+                tdist = self.__Norm__[i]*lgn.y()
+                self.output_params[self.__mpar__['Distributions']['Dist'][i]] = {'x':r,'y':tdist/np.sum(tdist)}
+                dist = dist + tdist
         sumdist = np.sum(dist)
         self.output_params['Distribtuion']={'x':r,'y':dist/sumdist}
         mean = np.sum(r*dist)/sumdist

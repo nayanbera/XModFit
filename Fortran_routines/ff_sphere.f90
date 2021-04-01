@@ -19,15 +19,14 @@ end subroutine ff_sphere
 
 subroutine ff_sphere_ml(q,R,rho,ff,aff,M,Nlayers)
     !***************************************************************************
-    !Subroutine to calculate the form factor of sphere with disctribution of radii
+    !Subroutine to calculate the form factor of multilayered sphere
     !q = Array of reciprocal wave-vectors at which the form-factor needs to be calculated
     !R = Array of radius and shell thicknesses of sphere in Angstroms
     !rho = Array of electron densities  of core and the shells
-    !Rdist = Probablity distribution of radii
-    !Nlayers = Number of shells plus the core
     !aff = amplitude of form factor
     !ff = Form factor of sphere
     !M = No. of reciprocal wave-vectors at which the form-factor needs to be calculated
+    !Nlayers = Number of shells plus the core
     !***************************************************************************
     integer :: M, Nlayers, i, j
     double precision :: q(0:M-1)

@@ -18,6 +18,13 @@ from utils import find_minmax, calc_rho, create_steps
 from functools import lru_cache
 import time
 
+from numba import jit
+
+@jit(nopython=True)
+def ff_sphere_numba(q,R,Rho):
+
+
+
 class Sphere_Uniform: #Please put the class name same as the function name
     def __init__(self, x=0, Np=20, flux=1e13, term='Total',dist='Gaussian', Energy=None, relement='Au', NrDep='False',
                  norm=1.0, sbkg=0.0, cbkg=0.0, abkg=0.0, D=1.0, phi=0.1, U=-1.0, SF='None',Rsig=0.0,
