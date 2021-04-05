@@ -7,6 +7,17 @@ sys.path.append(os.path.abspath('./Functions'))
 from utils import find_minmax
 from PeakFunctions import Gaussian, LogNormal
 
+from numba import jit
+
+@jit(nopython=False)
+def calc_dist(q,r,dist,sumdist):
+    ffactor=np.ones_like(q)
+    for i,q1 in enumerate(q):
+        f = np.sum(16 * np.pi ** 2 * (np.sin(q1 * r) - q1 * r * np.cos(q1 * r)) ** 2 * dist / q1 ** 6)
+        ffactor[i]=f / sumdist
+    return ffactor
+
+
 class Sphere_MultiModal:
     def __init__(self, x=0.001, dist='Gaussian', N=50, rhoc=1.0, rhosol=0.0, norm=1.0, bkg=0.0,
                  mpar={'Distributions':{'Dist':['Dist1'],'R':[1.0],'Rsig':[1.0],'Norm':[1.0]}}):
@@ -46,16 +57,21 @@ class Sphere_MultiModal:
         for mkey in self.__mkeys__:
             for key in self.__mpar__[mkey].keys():
                 if key !='Dist':
-                    for i in range(len(self.__mpar__[mkey][key])):
-                        self.params.add('__%s_%s_%03d'%(mkey,key,i),value=self.__mpar__[mkey][key][i],vary=0,min=-np.inf,max=np.inf,expr=None,brute_step=0.1)
+                    if key == 'Rsig':
+                        for i in range(len(self.__mpar__[mkey][key])):
+                            self.params.add('__%s_%s_%03d' % (mkey, key, i), value=self.__mpar__[mkey][key][i], vary=0,
+                                            min=0.001, max=np.inf, expr=None, brute_step=0.1)
+                    else:
+                        for i in range(len(self.__mpar__[mkey][key])):
+                            self.params.add('__%s_%s_%03d'%(mkey,key,i),value=self.__mpar__[mkey][key][i],vary=0,min=-np.inf,max=np.inf,expr=None,brute_step=0.1)
 
     def update_params(self):
         mkey = self.__mkeys__[0]
         key='R'
         self.__Nl__ = len(self.__mpar__[mkey][key])
-        self.__R__ = [self.params['__%s_%s_%03d' % (mkey, key, i)] for i in range(self.__Nl__)]
+        self.__R__ = np.array([self.params['__%s_%s_%03d' % (mkey, key, i)] for i in range(self.__Nl__)])
         key='Rsig'
-        self.__Rsig__ = [self.params['__%s_%s_%03d' % (mkey, key, i)] for i in range(self.__Nl__)]
+        self.__Rsig__ = np.array([self.params['__%s_%s_%03d' % (mkey, key, i)] for i in range(self.__Nl__)])
         key='Norm'
         self.__Norm__ = [self.params['__%s_%s_%03d' % (mkey, key, i)] for i in range(self.__Nl__)]
 
@@ -63,35 +79,38 @@ class Sphere_MultiModal:
         self.update_params()
         rho=self.rhoc-self.rhosol
         if self.dist=='Gaussian':
-            rmin, rmax = max(0.0001, self.__R__[0]-5*self.__Rsig__[0]),self.__R__[-1]+5*self.__Rsig__[-1]
+            rmin, rmax = max(0.0001, np.min(self.__R__-5*self.__Rsig__)),np.max(self.__R__+5*self.__Rsig__)
             r=np.linspace(rmin,rmax,self.N)
         else:
-            rmin, rmax = max(0.0001, np.exp(np.log(self.__R__[0]) - 5 * self.__Rsig__[0])), np.exp(np.log(self.__R__[-1]) + 5 * self.__Rsig__[-1])
+            rmin, rmax = max(0.0001, np.min(np.exp(np.log(self.__R__) - 5 * self.__Rsig__))), np.max(np.exp(np.log(self.__R__) + 5 * self.__Rsig__))
             r = np.logspace(np.log10(rmin), np.log10(rmax), self.N)
         dist=np.zeros_like(r)
+        tdist=[]
         for i in range(self.__Nl__):
             if self.dist == 'Gaussian':
                 gau=Gaussian.Gaussian(x = r, pos = self.__R__[i], wid = self.__Rsig__[i])
                 gau.x=r
-                tdist=self.__Norm__[i]*gau.y()
-                self.output_params[self.__mpar__['Distributions']['Dist'][i]] = {'x':r,'y':tdist/np.sum(tdist)}
-                dist = dist + tdist
+                tdist.append(self.__Norm__[i]*gau.y())
+                dist = dist + tdist[i]
             else:
                 lgn=LogNormal.LogNormal(x = r, pos = self.__R__[i], wid = self.__Rsig__[i])
                 lgn.x = r
-                tdist = self.__Norm__[i]*lgn.y()
-                self.output_params[self.__mpar__['Distributions']['Dist'][i]] = {'x':r,'y':tdist/np.sum(tdist)}
-                dist = dist + tdist
+                tdist.append(self.__Norm__[i]*lgn.y())
+                dist = dist + tdist[i]
         sumdist = np.sum(dist)
-        self.output_params['Distribtuion']={'x':r,'y':dist/sumdist}
-        mean = np.sum(r*dist)/sumdist
-        self.output_params['scaler_parameters']['Rmean'] = mean
-        self.output_params['scaler_parameters']['Rwidth'] = np.sqrt(np.sum((r-mean)**2*dist)/sumdist)
-        ffactor=[]
-        for x in self.x:
-            f = np.sum(16*np.pi**2*(np.sin(x * r) - x * r * np.cos(x * r)) ** 2 * dist / x ** 6)
-            ffactor.append(f / sumdist)
-        return self.norm*rho**2*np.array(ffactor)+self.bkg
+        ffactor=calc_dist(self.x,r,dist,sumdist)
+        I_total=self.norm * rho ** 2 * ffactor + self.bkg
+        if not self.__fit__:
+            self.output_params['I_total'] = {'x': self.x,'y': I_total}
+            self.output_params['Distribution'] = {'x': r, 'y': dist / sumdist}
+            mean = np.sum(r * dist) / sumdist
+            self.output_params['scaler_parameters']['Rmean'] = mean
+            self.output_params['scaler_parameters']['Rwidth'] = np.sqrt(np.sum((r - mean) ** 2 * dist) / sumdist)
+            for i in range(len(tdist)):
+                self.output_params[self.__mpar__['Distributions']['Dist'][i]] = {'x': r, 'y': tdist[i] / sumdist}
+                tffactor=calc_dist(self.x,r,tdist[i],sumdist)
+                self.output_params['I_'+self.__mpar__['Distributions']['Dist'][i]]={'x':self.x,'y':self.norm*rho**2*tffactor+self.bkg}
+        return I_total
 
 
 if __name__=='__main__':

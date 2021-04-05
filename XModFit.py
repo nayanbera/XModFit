@@ -1218,7 +1218,7 @@ class XModFit(QWidget):
         self.genparamLayoutWidget.addWidget(self.genParamListWidget,colspan=2)
         self.genparamLayoutWidget.nextRow()
         self.saveGenParamButton=QPushButton('Save Generated Parameters')
-        self.saveGenParamButton.clicked.connect(self.saveGenParameters)
+        self.saveGenParamButton.clicked.connect(lambda x:self.saveGenParameters(bfname=None))
         self.genparamLayoutWidget.addWidget(self.saveGenParamButton,colspan=2)
 
         self.parSplitter.addWidget(self.genparamLayoutWidget)
@@ -1502,8 +1502,8 @@ class XModFit(QWidget):
                     item = self.mfitParamTableWidget[mkey].item(curRow, col)
                     item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable)
                 self.fit.params['__mpar__'][mkey][pkey].insert(curRow, self.mfitParamData[mkey][curRow][col])
-            #self.update_mfit_parameters()
-            # self.update_plot()
+            self.update_mfit_parameters_new()
+            self.update_plot()
             # self.remove_mpar_button.setEnabled(True)
         else:
             QMessageBox.warning(self,'Warning','Please select a row at which you would like to add a set of parameters',QMessageBox.Ok)
@@ -1557,57 +1557,69 @@ class XModFit(QWidget):
         else:
             QMessageBox.warning(self,'Nothing selected','No item is selected for removal',QMessageBox.Ok)
         self.mfitParamTableWidget[mkey].cellChanged.connect(self.mfitParamChanged_new)
-        # self.update_plot()
+        self.fit.func.output_params={'scaler_parameters': {}}
+        self.update_plot()
         if self.mfitParamTableWidget[mkey].rowCount()==self.mpar_N[mkey]:
             self.remove_mpar_button.setDisabled(True)
             
         
-    def saveGenParameters(self):
-        if len(self.genParamListWidget.selectedItems())==1:
-            text=self.genParamListWidget.selectedItems()[0].text()
-            name,var=text.split(' : ')
-            fname=QFileDialog.getSaveFileName(self,'Save generated data as',self.curDir,'Text files (*.txt)')[0]
-            if fname!='':
-                if fname[-4:]!='.txt':
-                    fname=fname+'.txt'
-                header='Generated output file on %s\n'%time.asctime()
-                header += 'Category=%s\n' % self.curr_category
-                header += 'Function=%s\n' % self.funcListWidget.currentItem().text()
-                for i in range(self.fixedParamTableWidget.rowCount()):
-                    header+='%s=%s\n'%(self.fixedParamTableWidget.item(i,0).text(),self.fixedParamTableWidget.item(i,1).text())
-                for i in range(self.sfitParamTableWidget.rowCount()):
-                    header+='%s=%s\n'%(self.sfitParamTableWidget.item(i,0).text(),self.sfitParamTableWidget.item(i,1).text())
-                for k in range(self.mfitParamTabWidget.count()):
-                    mkey=self.mfitParamTabWidget.tabText(k)
-                    for i in range(self.mfitParamTableWidget[mkey].rowCount()):
-                        vartxt=self.mfitParamTableWidget[mkey].item(i,0).text()
-                        for j in range(1,self.mfitParamTableWidget[mkey].columnCount()):
-                            header+='%s_%s=%s\n'%(vartxt,self.mfitParamTableWidget[mkey].horizontalHeaderItem(j).text(),
-                                                  self.mfitParamTableWidget[mkey].item(i,j).text())
-                if 'names' in self.fit.params['output_params'][name]:
-                    header += "col_names=%s\n" % str(self.fit.params['output_params'][name]['names'])
-                else:
-                    header += "col_names=%s\n" % var
-                if var=="['x', 'y']":
-                    header+='x\ty\n'
-                    res=np.vstack((self.fit.params['output_params'][name]['x'], self.fit.params['output_params'][name]['y'])).T
-                    np.savetxt(fname,res,header=header,comments='#')
-                elif var=="['x', 'y', 'yerr']":
-                    header+='x\ty\tyerr\n'
-                    res=np.vstack((self.fit.params['output_params'][name]['x'], self.fit.params['output_params'][name]['y'],self.fit.params['output_params'][name]['yerr'])).T
-                    np.savetxt(fname,res,header=header,comments='#')
-                elif var=="['x', 'y', 'z']":
-                    res=[]
-                    header+='x\ty\tz\n'
-                    for i in range(self.fit.params['output_params'][name]['x'].shape[1]):
-                        for j in range(self.fit.params['output_params'][name]['x'].shape[0]):
-                            res.append([self.fit.params['output_params'][name][t][i,j] for t in ['x','y','z']])
-                    res=np.array(res)
-                    np.savetxt(fname,res,header=header,comments='#')
-                else:
-                    QMessageBox.warning(self,'Format error','The data is in some different format and couldnot be saved.',QMessageBox.Ok)
+    def saveGenParameters(self,bfname=None):
+        # if len(self.genParamListWidget.selectedItems())==1:
+        if bfname is None:
+            bfname = QFileDialog.getSaveFileName(self, 'Provide the prefix of the generated files', self.curDir)[0]
+        print(bfname)
+        if bfname!='':
+            bfname=os.path.splitext(bfname)[0]
         else:
-            QMessageBox.warning(self,'Selection Error','Please select a single generated data to be saved.',QMessageBox.Ok)
+            return
+        selParams=self.genParamListWidget.selectedItems()
+        for params in selParams:
+            text=params.text()
+            parname,var=text.split(' : ')
+            fname=bfname+'_'+parname+'.txt'
+            # if fname!='':
+            #     if fname[-4:]!='.txt':
+            #         fname=fname+'.txt'
+            header='Generated output file on %s\n'%time.asctime()
+            header += 'Category=%s\n' % self.curr_category
+            header += 'Function=%s\n' % self.funcListWidget.currentItem().text()
+            for i in range(self.fixedParamTableWidget.rowCount()):
+                header+='%s=%s\n'%(self.fixedParamTableWidget.item(i,0).text(),self.fixedParamTableWidget.item(i,1).text())
+            for i in range(self.sfitParamTableWidget.rowCount()):
+                header+='%s=%s\n'%(self.sfitParamTableWidget.item(i,0).text(),self.sfitParamTableWidget.item(i,1).text())
+            for k in range(self.mfitParamTabWidget.count()):
+                mkey=self.mfitParamTabWidget.tabText(k)
+                for i in range(self.mfitParamTableWidget[mkey].rowCount()):
+                    vartxt=self.mfitParamTableWidget[mkey].item(i,0).text()
+                    for j in range(1,self.mfitParamTableWidget[mkey].columnCount()):
+                        header+='%s_%s=%s\n'%(vartxt,self.mfitParamTableWidget[mkey].horizontalHeaderItem(j).text(),
+                                              self.mfitParamTableWidget[mkey].item(i,j).text())
+
+            if 'names' in self.fit.params['output_params'][parname]:
+                header += "col_names=%s\n" % str(self.fit.params['output_params'][parname]['names'])
+            else:
+                header += "col_names=%s\n" % var
+
+            if var=="['x', 'y']":
+                header+='x\ty\n'
+                res=np.vstack((self.fit.params['output_params'][parname]['x'], self.fit.params['output_params'][parname]['y'])).T
+                np.savetxt(fname,res,header=header,comments='#')
+            elif var=="['x', 'y', 'yerr']":
+                header+='x\ty\tyerr\n'
+                res=np.vstack((self.fit.params['output_params'][parname]['x'], self.fit.params['output_params'][parname]['y'],self.fit.params['output_params'][parname]['yerr'])).T
+                np.savetxt(fname,res,header=header,comments='#')
+            elif var=="['x', 'y', 'z']":
+                res=[]
+                header+='x\ty\tz\n'
+                for i in range(self.fit.params['output_params'][parname]['x'].shape[1]):
+                    for j in range(self.fit.params['output_params'][parname]['x'].shape[0]):
+                        res.append([self.fit.params['output_params'][parname][t][i,j] for t in ['x','y','z']])
+                res=np.array(res)
+                np.savetxt(fname,res,header=header,comments='#')
+            else:
+                QMessageBox.warning(self,'Format error','The data is in some different format and couldnot be saved.',QMessageBox.Ok)
+        # else:
+        #     QMessageBox.warning(self,'Selection Error','Please select a single generated data to be saved.',QMessageBox.Ok)
         
         
     def saveParameters(self):
@@ -1957,7 +1969,7 @@ class XModFit(QWidget):
                 self.fixedParamTableWidget.setCellWidget(row,1,combobox)
                 index = combobox.findText(str(self.fit.params[self.fixedParamTableWidget.item(row, 0).text()]))
                 combobox.setCurrentIndex(index)
-                combobox.currentIndexChanged.connect(self.update_plot)
+                combobox.currentIndexChanged.connect(lambda x: self.fixedParamChanged(row,1))
         self.fixedParamTableWidget.resizeRowsToContents()
         self.fixedParamTableWidget.resizeColumnsToContents()
         self.fixedParamTableWidget.cellChanged.connect(self.fixedParamChanged)
@@ -2001,15 +2013,16 @@ class XModFit(QWidget):
         self.mfitParamTabWidget.currentChanged.disconnect()
         if '__mpar__' in self.fit.params.keys() and self.fit.params['__mpar__']!={}:
             self.mfitParamCoupledCheckBox.setEnabled(True)
-            self.mfitParamCoupledCheckBox.setCheckState(Qt.Unchecked)
+            # self.mfitParamCoupledCheckBox.setCheckState(Qt.Unchecked)
             self.mfitParamTableWidget = {}
             self.mfitParamData = {}
             mkeys=list(self.fit.params['__mpar__'].keys())
-            for i in range(self.mfitParamTabWidget.count()-1,-1,-1):
-                try:
-                    self.mfitParamTabWidget.removeTab(i)
-                except:
-                    pass
+            if self.mfitParamTabWidget.count()>0:
+                for i in range(self.mfitParamTabWidget.count()-1,-1,-1):
+                    try:
+                        self.mfitParamTabWidget.removeTab(i)
+                    except:
+                        pass
             for mkey in mkeys:
                 self.mfitParamTableWidget[mkey] = pg.TableWidget(sortable=False)
                 #self.mfitParamTableWidget[mkey].setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -2040,7 +2053,7 @@ class XModFit(QWidget):
                             item.setFlags(
                             Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable)
                             key = '__%s_%s_%03d' % (mkey, self.mfitParamTableWidget[mkey].horizontalHeaderItem(col).text(), row)
-                            if self.fit.fit_params[key].vary == 0:
+                            if self.fit.fit_params[key].vary == 0 or self.fit.fit_params[key].vary==False:
                                 item.setCheckState(Qt.Unchecked)
                             else:
                                 item.setCheckState(Qt.Checked)
@@ -2114,15 +2127,14 @@ class XModFit(QWidget):
             try:
                 oldVal=self.fit.params[txt]
                 self.fit.params[txt]=val
-                self.fchanged=False
+                self.fchanged = False
                 self.update_plot()
             except:
                 QMessageBox.warning(self,'Value Error','The value just entered is not seem to be right.\n'+traceback.format_exc(),QMessageBox.Ok)
                 self.fixedParamTableWidget.item(row,col).setText(str(oldVal))
         self.fixedParamTableWidget.resizeRowsToContents()
         self.fixedParamTableWidget.resizeColumnsToContents()
-        self.update_sfit_parameters()
-        self.update_mfit_parameters_new()
+        self.update_fit_parameters()
 
 
         
@@ -2227,10 +2239,12 @@ class XModFit(QWidget):
             QMessageBox.warning(self,'Value Error', 'Please input numbers only!', QMessageBox.Ok)
             self.mfitParamTableWidget[mkey].item(row,col).setText(str(self.fit.fit_params[key].value))
         self.mfitParamTableWidget[mkey].cellChanged.connect(self.mfitParamChanged_new)
-        self.update_sfit_parameters()
-        self.update_mfit_parameters_new()
+        self.update_fit_parameters()
         self.mfitParamTabWidget.setCurrentIndex(index)
         self.mfitParamTableWidget[mkey].setCurrentCell(row,col)
+        item=self.mfitParamTableWidget[mkey].item(row,col)
+        item.setSelected(True)
+        self.mfitParamTableWidget[mkey].scrollToItem(item)
 
 
         
@@ -2439,10 +2453,14 @@ class XModFit(QWidget):
             self.fit.params['output_params']['scaler_parameters']['Chi-Sqr'] = self.chisqr
             self.fit.params['output_params']['scaler_parameters']['Red_Chi_Sqr'] = self.red_chisqr
             if len(self.fit.params['output_params'])>0:
+                row=0
                 for key in self.fit.params['output_params'].keys():
                     if key=='scaler_parameters':
                         for k in self.fit.params['output_params'][key].keys():
                             self.genParamListWidget.addItem(k + ' : ' + str(self.fit.params['output_params'][key][k]))
+                            it=self.genParamListWidget.item(row)
+                            it.setFlags(it.flags() & ~Qt.ItemIsSelectable)
+                            row+=1
                     else:
                         var = []
                         for k in self.fit.params['output_params'][key].keys():
@@ -2450,6 +2468,7 @@ class XModFit(QWidget):
                                 var.append(k)
                         self.genParamListWidget.addItem(
                             str(key) + ' : ' + str(var))
+                        row+=1
                 if not self.fchanged:
                     for i in range(self.genParamListWidget.count()):
                         item=self.genParamListWidget.item(i)
@@ -2466,9 +2485,9 @@ class XModFit(QWidget):
                             'x': self.fit.x[key][self.fit.imin[key]:self.fit.imax[key] + 1],
                             'y': (self.fit.y[key][self.fit.imin[key]:self.fit.imax[key] + 1] - self.fit.yfit[key])
                                  / self.fit.yerr[key][self.fit.imin[key]:self.fit.imax[key] + 1]}
-                    else:
-                        self.fit.params['output_params']['Residuals_%s' % key]={'x':self.fit.x[key][self.fit.imin[key]:self.fit.imax[key] + 1],
-                                                                                'y':np.zeros_like(self.fit.x[key][self.fit.imin[key]:self.fit.imax[key] + 1])}
+                    # else:
+                    #     self.fit.params['output_params']['Residuals_%s' % key]={'x':self.fit.x[key][self.fit.imin[key]:self.fit.imax[key] + 1],
+                    #                                                             'y':np.zeros_like(self.fit.x[key][self.fit.imin[key]:self.fit.imax[key] + 1])}
                 pfnames = pfnames + [self.funcListWidget.currentItem().text() + ':' + key for key in
                                          self.fit.x.keys()]
             else:
@@ -2479,9 +2498,9 @@ class XModFit(QWidget):
                                                                      'y': (self.fit.y[
                                                                            self.fit.imin:self.fit.imax + 1] - self.fit.yfit) / self.fit.yerr[
                                                                                                                                self.fit.imin:self.fit.imax + 1]}
-                else:
-                    self.fit.params['output_params']['Residuals'] = {'x': self.fit.x[self.fit.imin:self.fit.imax + 1],
-                                                                     'y':np.zeros_like(self.fit.x[self.fit.imin:self.fit.imax + 1])}
+                # else:
+                #     self.fit.params['output_params']['Residuals'] = {'x': self.fit.x[self.fit.imin:self.fit.imax + 1],
+                #                                                      'y':np.zeros_like(self.fit.x[self.fit.imin:self.fit.imax + 1])}
                 pfnames=pfnames+[self.funcListWidget.currentItem().text()]
         self.plotWidget.Plot(pfnames)
         # QApplication.processEvents()

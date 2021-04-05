@@ -6,7 +6,7 @@ import os
 import scipy.constants
 import re
 import cmath
-from xraydb_bac import XrayDB
+from xraydb import XrayDB
 xdb = XrayDB()
 sys.path.append(os.path.abspath('.'))
 sys.path.append(os.path.abspath('./Functions'))

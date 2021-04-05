@@ -8,7 +8,7 @@ import os
 import numpy as np
 import re
 import scipy.constants
-from xraydb_bac import XrayDB
+from xraydb import XrayDB
 xdb = XrayDB()
 
 

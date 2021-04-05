@@ -18,10 +18,11 @@ from utils import find_minmax, calc_rho, create_steps
 from functools import lru_cache
 import time
 
-from numba import jit
+# from numba import jit
+#
+# @jit(nopython=True)
+# def ff_sphere_numba(q,R,Rho):
 
-@jit(nopython=True)
-def ff_sphere_numba(q,R,Rho):
 
 
 
