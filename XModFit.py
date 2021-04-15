@@ -2116,13 +2116,16 @@ class XModFit(QWidget):
     def fixedParamChanged(self,row,col):
         txt=self.fixedParamTableWidget.item(row,0).text()
         if txt in self.fit.params['choices'].keys():
-            self.fit.params[txt]=eval(self.fixedParamTableWidget.cellWidget(row,1).currentText())
+            try: # if the parameter is a number
+                self.fit.params[txt]=eval(self.fixedParamTableWidget.cellWidget(row,1).currentText())
+            except: # if the parameter is a string
+                self.fit.params[txt] = str(self.fixedParamTableWidget.cellWidget(row, 1).currentText())
             self.fchanged = False
             self.update_plot()
         else:
-            try:
+            try: # if the parameter is a number
                 val=eval(self.fixedParamTableWidget.item(row,col).text())
-            except:
+            except:  #if the parameter is a string
                 val=self.fixedParamTableWidget.item(row,col).text()
             try:
                 oldVal=self.fit.params[txt]
@@ -2306,7 +2309,9 @@ class XModFit(QWidget):
             self.fchanged=False
             if len(self.funcListWidget.selectedItems())>0:
                 try:
+                    stime = time.time()
                     self.fit.evaluate()
+                    exectime = time.time() - stime
                 except:
                     QMessageBox.warning(self, 'Value error',
                                         'Something wrong with the value of the parameter which you just entered.\n'+traceback.format_exc(),
@@ -2317,7 +2322,9 @@ class XModFit(QWidget):
                 except:
                     pass
                 self.genParamListWidget.clear()
+                self.fit.params['output_params']['scaler_parameters']['Exec-time (sec)'] = exectime
                 self.fit.params['output_params']['scaler_parameters']['Chi-Sqr']=self.chisqr
+                self.fit.params['output_params']['scaler_parameters']['Red_Chi_Sqr'] = self.red_chisqr
                 if len(self.fit.params['output_params']) > 0:
                     for key in self.fit.params['output_params'].keys():
                         if key == 'scaler_parameters':
@@ -2421,7 +2428,9 @@ class XModFit(QWidget):
 
         if len(self.funcListWidget.selectedItems())>0:
             try:
+                stime=time.time()
                 self.fit.evaluate()
+                exectime=time.time()-stime
             except:
                 QMessageBox.warning(self, 'Evaluation Error', traceback.format_exc(), QMessageBox.Ok)
                 self.fit.yfit = self.fit.func.x
@@ -2450,6 +2459,7 @@ class XModFit(QWidget):
             except:
                 self.fitResultsListWidget.clear()
             self.genParamListWidget.clear()
+            self.fit.params['output_params']['scaler_parameters']['Exec-time (sec)'] = exectime
             self.fit.params['output_params']['scaler_parameters']['Chi-Sqr'] = self.chisqr
             self.fit.params['output_params']['scaler_parameters']['Red_Chi_Sqr'] = self.red_chisqr
             if len(self.fit.params['output_params'])>0:

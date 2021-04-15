@@ -71,14 +71,15 @@ class Capillary_Transmission: #Please put the class name same as the function na
         update all the multifit parameters
         """
         pass
+
     @lru_cache(maxsize=10)
     def absorption(self,x,Di,thickness,x_center,l_in,l_wall):
         R1 = Di / 2
         R2 = R1 + thickness
         x = np.array(x) - x_center
-        fac1 = np.where(abs(x) > R1, 1.0, np.exp(-2 * np.sqrt(R1 ** 2 - x ** 2) / l_in) *
+        fac1 = np.where(np.abs(x) > R1, 1.0, np.exp(-2 * np.sqrt(R1 ** 2 - x ** 2) / l_in) *
                         np.exp(-2 * (np.sqrt(R2 ** 2 - x ** 2) - np.sqrt(R1 ** 2 - x ** 2)) / l_wall))
-        fac2 = np.where((abs(x) > R1) & (abs(x) < R2), np.exp(-2 * np.sqrt(R2 ** 2 - x ** 2) / l_wall), 1.0)
+        fac2 = np.where((np.abs(x) > R1) & (np.abs(x) < R2), np.exp(-2 * np.sqrt(R2 ** 2 - x ** 2) / l_wall), 1.0)
         fac = self.norm * fac1 * fac2
         return fac
 
