@@ -1307,7 +1307,7 @@ class XModFit(QWidget):
         Saves the simulated curve in a user-supplied ascii file
         :return:
         """
-        fname=QFileDialog.getSaveFileName(caption='Save As',filter='Text files (*.dat, *.txt)',directory=self.curDir)[0]
+        fname=QFileDialog.getSaveFileName(caption='Save As',filter='Text files (*.dat *.txt)',directory=self.curDir)[0]
         if fname!='':
             header='Simulated curve generated on %s\n'%time.asctime()
             header+='Category:%s\n'%self.curr_category
