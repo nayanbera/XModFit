@@ -2563,7 +2563,16 @@ class XModFit(QWidget):
         QApplication.processEvents()
 
 if __name__=='__main__':
-    app=QApplication(sys.argv)
+    # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+    # QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+    app = QApplication(sys.argv)
+    try:
+        # app.setAttribute(Qt.AA_EnableHighDpiScaling)
+        app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    except:
+        pass
+    # app=QApplication(sys.argv)
     w=XModFit()
     w.setWindowTitle('XModFit')
     resolution = QDesktopWidget().screenGeometry()

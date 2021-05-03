@@ -44,7 +44,7 @@ class Sphere_MultiModal:
         self.N=N
         self.__mpar__=mpar
         self.__mkeys__=list(self.__mpar__.keys())
-        self.choices={'dist':['Gaussian','LogNormal']}
+        self.choices={'dist':['Gaussian','LogNormal','Weibull']}
         self.init_params()
         self.output_params = {'scaler_parameters': {}}
 
@@ -78,12 +78,16 @@ class Sphere_MultiModal:
     def y(self):
         self.update_params()
         rho=self.rhoc-self.rhosol
-        if self.dist=='Gaussian':
+        if self.dist == 'Gaussian':
             rmin, rmax = max(0.0001, np.min(self.__R__-5*self.__Rsig__)),np.max(self.__R__+5*self.__Rsig__)
             r=np.linspace(rmin,rmax,self.N)
-        else:
+        elif self.dist == 'LogNormal':
             rmin, rmax = max(0.0001, np.min(np.exp(np.log(self.__R__) - 5 * self.__Rsig__))), np.max(np.exp(np.log(self.__R__) + 5 * self.__Rsig__))
             r = np.logspace(np.log10(rmin), np.log10(rmax), self.N)
+        else:
+            maxr=np.max(self.__R__)
+            rmin,rmax= 0.0,maxr+maxr*maxr**(1.0/np.max(self.__Rsig__))
+            r = np.linspace(rmin,rmax, self.N)
         dist=np.zeros_like(r)
         tdist=[]
         for i in range(self.__Nl__):
@@ -92,11 +96,15 @@ class Sphere_MultiModal:
                 gau.x=r
                 tdist.append(self.__Norm__[i]*gau.y())
                 dist = dist + tdist[i]
-            else:
+            elif self.dist == 'LogNormal':
                 lgn=LogNormal.LogNormal(x = r, pos = self.__R__[i], wid = self.__Rsig__[i])
                 lgn.x = r
                 tdist.append(self.__Norm__[i]*lgn.y())
                 dist = dist + tdist[i]
+            else:
+                twdist=(self.__Rsig__[i]/self.__R__[i])*(r/self.__R__[i])**(self.__Rsig__[i]-1.0)*np.exp(-(r/self.__R__[i])**self.__Rsig__[i])
+                tdist.append(self.__Norm__[i]*twdist)
+                dist = dist  + tdist[i]
         sumdist = np.sum(dist)
         ffactor=calc_dist(self.x,r,dist,sumdist)
         I_total=self.norm * rho ** 2 * ffactor + self.bkg
