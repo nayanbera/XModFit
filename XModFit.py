@@ -555,6 +555,7 @@ class XModFit(QWidget):
         self.fitLayoutWidget.nextRow()
         self.fitButton = QPushButton('Fit')
         self.fitButton.clicked.connect(lambda x: self.doFit())
+        self.fitButton.setEnabled(False)
         self.unfitButton = QPushButton('Undo fit')
         self.unfitButton.clicked.connect(self.undoFit)
         self.fitLayoutWidget.addWidget(self.unfitButton)
@@ -566,7 +567,7 @@ class XModFit(QWidget):
         self.showConfIntervalButton.clicked.connect(self.fitErrorDialog)
         self.calcConfInterButton = QPushButton('Calculate Param Error')
         self.calcConfInterButton.clicked.connect(self.confInterval_emcee)
-        # self.calcConfInterButton.setDisabled(True)
+        self.calcConfInterButton.setDisabled(True)
         self.fitLayoutWidget.addWidget(self.showConfIntervalButton)
         self.fitLayoutWidget.addWidget(self.calcConfInterButton, col=1)
 
@@ -594,6 +595,9 @@ class XModFit(QWidget):
             else:
                 text='np.linspace(%.3f,%.3f,100)'%(xmin,xmax)
             self.xLineEdit.setText(text)
+            self.fitButton.setEnabled(True)
+        else:
+            self.fitButton.setEnabled(False)
         self.update_plot()
         self.xChanged()
             
@@ -646,7 +650,7 @@ class XModFit(QWidget):
             self.xmin, self.xmax=float(xmin),float(xmax)
             self.update_plot()
         except:
-            QMessageBox.warning(self,"Value Error", "Please supply the Xrange in this format: xmin:xmax",QMessageBox.Ok)
+            QMessageBox.warning(self,"Value Error", "Please supply the Xrange in this format:\n xmin:xmax",QMessageBox.Ok)
     
 
 
@@ -806,9 +810,11 @@ class XModFit(QWidget):
                                                  self.fit.yerr[self.fit.imin:self.fit.imax + 1],
                                                  self.fit.yfit)).T
                             np.savetxt(ofname + '_fit.txt', fitdata, header=header, comments='#')
+                            self.calcConfInterButton.setEnabled(True)
                         # self.xChanged()
                     else:
                         self.undoFit()
+                        self.calcConfInterButton.setEnabled(False)
                 else:
                     self.fit.functionCalled.disconnect()
                     self.fitErrorDialog()
@@ -1566,8 +1572,7 @@ class XModFit(QWidget):
     def saveGenParameters(self,bfname=None):
         # if len(self.genParamListWidget.selectedItems())==1:
         if bfname is None:
-            bfname = QFileDialog.getSaveFileName(self, 'Provide the prefix of the generated files', self.curDir)[0]
-        print(bfname)
+            bfname = QFileDialog.getSaveFileName(self, 'Provide the prefix of the generated files',self.curDir)[0]
         if bfname!='':
             bfname=os.path.splitext(bfname)[0]
         else:
@@ -1634,6 +1639,10 @@ class XModFit(QWidget):
             fh.write('#File saved on %s\n'%time.asctime())
             fh.write('#Category: %s\n'%self.categoryListWidget.currentItem().text())
             fh.write('#Function: %s\n'%self.funcListWidget.currentItem().text())
+            fh.write('#Fit Range=%s\n'%self.xminmaxLineEdit.text())
+            fh.write('#Fit Method=%s\n'%self.fitMethodComboBox.currentText())
+            fh.write('#Fit Scale=%s\n'%self.fitScaleComboBox.currentText())
+            fh.write('#Fit Iterations=%s\n'%self.fitIterationLineEdit.text())
             fh.write('#Fixed Parameters:\n')
             fh.write('#param\tvalue\n')
             for row in range(self.fixedParamTableWidget.rowCount()):
@@ -1718,7 +1727,19 @@ class XModFit(QWidget):
                     sfline=None
                     mfline=None
                     for line in lines[3:]:
-                        if line=='#Fixed Parameters:\n':
+                        if '#Fit Range=' in line:
+                            self.xminmaxLineEdit.setText(line.strip().split('=')[1])
+                            fline=lnum+1
+                        elif '#Fit Method=' in line:
+                            self.fitMethodComboBox.setCurrentText(line.strip().split('=')[1])
+                            fline=lnum+1
+                        elif '#Fit Scale=' in line:
+                            self.fitScaleComboBox.setCurrentText(line.strip().split('=')[1])
+                            fline=lnum+1
+                        elif '#Fit Iterations=' in line:
+                            self.fitIterationLineEdit.setText(line.strip().split('=')[1])
+                            fline=lnum+1
+                        elif line=='#Fixed Parameters:\n':
                             fline=lnum+2
                         elif line=='#Single fitting parameters:\n':
                             sfline=lnum+2
@@ -2229,6 +2250,7 @@ class XModFit(QWidget):
             self.fchanged=False
             if pchanged:
                 try:
+                    self.fit.func.output_params={'scaler_parameters': {}}
                     self.update_plot()
                 except:
                     QMessageBox.warning(self, 'Value Error', 'The value you entered are not valid!', QMessageBox.Ok)
