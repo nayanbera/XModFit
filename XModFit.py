@@ -1631,7 +1631,7 @@ class XModFit(QWidget):
         """
         Saves all the fixed and fitted parameteres in a file
         """
-        fname,_=QFileDialog.getSaveFileName(self,caption='Save parameters as',directory=self.curDir,filter='Parameter files (*.par)')
+        fname=QFileDialog.getSaveFileName(self,caption='Save parameters as',directory=self.curDir,filter='Parameter files (*.par)')[0]
         if fname!='':
             if fname[-4:]!='.par':
                 fname=fname+'.par'
@@ -1702,7 +1702,7 @@ class XModFit(QWidget):
         """
         # if self.funcListWidget.currentItem() is not None:
         if fname is None:
-            fname,_=QFileDialog.getOpenFileName(self,caption='Open parameter file',directory=self.curDir,filter='Parameter files (*.par)')
+            fname=QFileDialog.getOpenFileName(self,caption='Open parameter file',directory=self.curDir,filter='Parameter files (*.par)')[0]
         else:
             fname=fname
         if fname!='':
@@ -2597,10 +2597,12 @@ if __name__=='__main__':
     # app=QApplication(sys.argv)
     w=XModFit()
     w.setWindowTitle('XModFit')
-    resolution = QDesktopWidget().screenGeometry()
-    w.setGeometry(0, 0, resolution.width() - 100, resolution.height() - 100)
-    w.move(int(resolution.width() / 2) - int(w.frameSize().width() / 2),
-              int(resolution.height() / 2) - int(w.frameSize().height() / 2))
+    # resolution = QDesktopWidget().screenGeometry()
+    # w.setGeometry(0, 0, resolution.width() - 100, resolution.height() - 100)
+    # w.move(int(resolution.width() / 2) - int(w.frameSize().width() / 2),
+    #           int(resolution.height() / 2) - int(w.frameSize().height() / 2))
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
     try:
         fname = sys.argv[1]
         w.addData(fnames=[fname])
