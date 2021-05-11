@@ -164,8 +164,8 @@ class Parratt_New: #Please put the class name same as the function name
         n, z, d, rho, beta = self.calcProfile(self.__d__[mkey], self.__rho__[mkey],
                                                                                 self.__beta__[mkey], self.__sig__[mkey],
                                                                                 mkey, self.Minstep)
-        self.output_params['%s_EDP' % self.__mkeys__[0]] = {'x': z, 'y': rho}
-        self.output_params['%s_ADP' % self.__mkeys__[0]] = {'x': z, 'y': beta}
+        self.output_params['%s_EDP' % self.__mkeys__[0]] = {'x': z, 'y': rho, 'names':['z, \u212B','\u03c1, el/\u212B<sup>3</sup>']}
+        self.output_params['%s_ADP' % self.__mkeys__[0]] = {'x': z, 'y': beta, 'names':['z, \u212B','Beta']}
         refq, r2 = self.py_parratt(tuple(x), lam, tuple(d), tuple(rho), tuple(beta))
         if self.rrf:
             rhos = (self.params['__%s_rho_000'%(mkey)].value, self.params['__%s_rho_%03d' % (mkey,n - 1)].value)

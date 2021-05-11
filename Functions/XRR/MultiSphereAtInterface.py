@@ -177,11 +177,11 @@ class MultiSphereAtInterface: #Please put the class name same as the function na
         z,d,rho=self.calcProfile(self.Rc,self.rhoc,self.rhosh,self.__Z0__,self.__cov__,self.__Z0sig__,self.Tsh,self.rhoup,self.rhodown,
                          self.sig,self.zmin,self.zmax,self.dz)
         if not self.__fit__:
-            self.output_params['Total density profile']={'x':z,'y':rho}
+            self.output_params['Total density profile']={'x':z,'y':rho, 'names':['z, \u212B','\u03c1, el/\u212B<sup>3</sup>']}
             for i in range(len(self.__Z0__)):
                 rhonp=self.NpRhoGauss(tuple(z),Rc=self.Rc,rhoc=self.rhoc,Tsh=self.Tsh,rhosh=self.rhosh,Z0=tuple([self.__Z0__[i]]),
                                     cov=tuple([self.__cov__[i]]),Z0sig=tuple([self.__Z0sig__[i]]),rhoup=self.rhoup,rhodown=self.rhodown,sig=self.sig)
-                self.output_params['Layer %d contribution'%(i+1)]={'x':z,'y':rhonp,'names':['depth (Angs)','Electron Density (el/Angs^3)']}
+                self.output_params['Layer %d contribution'%(i+1)]={'x':z,'y':rhonp,'names':['z, \u212B','\u03c1, el/\u212B<sup>3</sup>']}
         x=self.x+self.qoff
         lam=6.62607004e-34*2.99792458e8*1e10/self.E/1e3/1.60217662e-19
         refq,r2=self.py_parratt(tuple(x),lam,tuple(d),tuple(rho),tuple(np.zeros_like(rho)))

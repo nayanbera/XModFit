@@ -66,14 +66,18 @@ class Sphere_MultiModal:
                             self.params.add('__%s_%s_%03d'%(mkey,key,i),value=self.__mpar__[mkey][key][i],vary=0,min=-np.inf,max=np.inf,expr=None,brute_step=0.1)
 
     def update_params(self):
+        self.rhoc=self.params['rhoc'].value
+        self.rhosol=self.params['rhosol'].value
+        self.norm=self.params['norm'].value
+        self.bkg=self.params['bkg'].value
         mkey = self.__mkeys__[0]
         key='R'
         self.__Nl__ = len(self.__mpar__[mkey][key])
-        self.__R__ = np.array([self.params['__%s_%s_%03d' % (mkey, key, i)] for i in range(self.__Nl__)])
+        self.__R__ = np.array([self.params['__%s_%s_%03d' % (mkey, key, i)].value for i in range(self.__Nl__)])
         key='Rsig'
-        self.__Rsig__ = np.array([self.params['__%s_%s_%03d' % (mkey, key, i)] for i in range(self.__Nl__)])
+        self.__Rsig__ = np.array([self.params['__%s_%s_%03d' % (mkey, key, i)].value for i in range(self.__Nl__)])
         key='Norm'
-        self.__Norm__ = [self.params['__%s_%s_%03d' % (mkey, key, i)] for i in range(self.__Nl__)]
+        self.__Norm__ = [self.params['__%s_%s_%03d' % (mkey, key, i)].value for i in range(self.__Nl__)]
 
     def y(self):
         self.update_params()

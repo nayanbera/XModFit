@@ -1824,7 +1824,8 @@ class XModFit(QWidget):
                     for i in range(self.mfitParamTabWidget.count()):
                         mkey=self.mfitParamTabWidget.tabText(i)
                         self.mfitParamTableWidget[mkey].cellChanged.connect(self.mfitParamChanged_new)
-                    self.update_plot()
+                    self.xminmaxChanged()
+                    # self.update_plot()
                 else:
                     QMessageBox.warning(self, 'File error',
                                         'This parameter file does not belong to function: %s' % func, QMessageBox.Ok)
@@ -1838,13 +1839,13 @@ class XModFit(QWidget):
         self.plotSplitter=QSplitter(Qt.Vertical)
         #self.plotLayoutWidget=pg.LayoutWidget(self)
         self.plotWidget=PlotWidget()
-        self.plotWidget.setXLabel('X',fontsize=5)
-        self.plotWidget.setYLabel('Y',fontsize=5)
+        self.plotWidget.setXLabel('x',fontsize=5)
+        self.plotWidget.setYLabel('y',fontsize=5)
         self.plotSplitter.addWidget(self.plotWidget)
 
         self.extra_param_1DplotWidget=PlotWidget()
-        self.extra_param_1DplotWidget.setXLabel('X',fontsize=5)
-        self.extra_param_1DplotWidget.setYLabel('Y',fontsize=5)
+        self.extra_param_1DplotWidget.setXLabel('x',fontsize=5)
+        self.extra_param_1DplotWidget.setYLabel('y',fontsize=5)
         self.plotSplitter.addWidget(self.extra_param_1DplotWidget)
 
         self.fitResultsLayoutWidget = pg.LayoutWidget()
@@ -2546,9 +2547,20 @@ class XModFit(QWidget):
                 y=self.fit.params['output_params'][key]['y']
                 if 'yerr' in self.fit.params['output_params'][key].keys():
                     yerr=self.fit.params['output_params'][key]['yerr']
-                    data={'data':pd.DataFrame(list(zip(x,y,yerr)),columns=['x','y','yerr']),'meta':{'col_names':[]}}
+                    if 'names' in self.fit.params['output_params'][key].keys():
+                        data = {'data': pd.DataFrame(list(zip(x, y, yerr)), columns=self.fit.params['output_params'][key]['names']),
+                            'meta': {'col_names': self.fit.params['output_params'][key]['names']}}
+                    else:
+                        data = {'data': pd.DataFrame(list(zip(x, y, yerr)), columns=['x', 'y', 'yerr']),
+                            'meta': {'col_names': ['x', 'y', 'yerr']}}
+
                 else:
-                    data = {'data': pd.DataFrame(list(zip(x, y)), columns=['x', 'y']), 'meta': {'col_names': []}}
+                    if 'names' in self.fit.params['output_params'][key].keys():
+                        data = {'data': pd.DataFrame(list(zip(x, y)), columns=self.fit.params['output_params'][key]['names']),
+                                'meta': {'col_names': self.fit.params['output_params'][key]['names']}}
+                    else:
+                        data = {'data': pd.DataFrame(list(zip(x, y)), columns=['x', 'y']),
+                                'meta': {'col_names': ['x', 'y']}}
                 data_dlg = Data_Dialog(data=data, parent=self, expressions={},
                                        plotIndex=None, colors=None)
                 data_dlg.setModal(True)
@@ -2576,8 +2588,11 @@ class XModFit(QWidget):
                         yerr=None
                     self.extra_param_1DplotWidget.add_data(x=x,y=y,yerr=yerr,name=txt,fit=True)
                     if 'names' in self.fit.params['output_params'][txt]:
-                        self.extra_param_1DplotWidget.setXLabel(self.fit.params['output_params'][txt]['names'][0])
-                        self.extra_param_1DplotWidget.setYLabel(self.fit.params['output_params'][txt]['names'][1])
+                        self.extra_param_1DplotWidget.setXLabel(self.fit.params['output_params'][txt]['names'][0],fontsize=5)
+                        self.extra_param_1DplotWidget.setYLabel(self.fit.params['output_params'][txt]['names'][1],fontsize=5)
+                    else:
+                        self.extra_param_1DplotWidget.setXLabel('x',fontsize=5)
+                        self.extra_param_1DplotWidget.setYLabel('y',fontsize=5)
                     fdata.append(txt)
         self.extra_param_1DplotWidget.Plot(fdata)
         self.gen_param_items=[item.text() for item in self.genParamListWidget.selectedItems()]
@@ -2597,10 +2612,10 @@ if __name__=='__main__':
     # app=QApplication(sys.argv)
     w=XModFit()
     w.setWindowTitle('XModFit')
-    # resolution = QDesktopWidget().screenGeometry()
-    # w.setGeometry(0, 0, resolution.width() - 100, resolution.height() - 100)
-    # w.move(int(resolution.width() / 2) - int(w.frameSize().width() / 2),
-    #           int(resolution.height() / 2) - int(w.frameSize().height() / 2))
+    resolution = QDesktopWidget().screenGeometry()
+    w.setGeometry(0, 0, resolution.width() - 100, resolution.height() - 100)
+    w.move(int(resolution.width() / 2) - int(w.frameSize().width() / 2),
+              int(resolution.height() / 2) - int(w.frameSize().height() / 2))
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
     try:
