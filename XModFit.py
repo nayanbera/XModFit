@@ -227,7 +227,13 @@ class XModFit(QWidget):
         self.vblayout.addWidget(self.menuBar,0)
         self.mainDock=DockArea(self,parent)
         self.vblayout.addWidget(self.mainDock,5)
-        
+
+        self.emcee_walker = 100
+        self.emcee_steps = 100
+        self.emcee_burn = 10
+        self.emcee_cores = 1
+        self.reuse_sampler = False
+
         self.funcDock=Dock('Functions',size=(1,6),closable=False)
         self.fitDock=Dock('Fit options',size=(1,2),closable=False)
         self.dataDock=Dock('Data',size=(1,8),closable=False)
@@ -691,6 +697,10 @@ class XModFit(QWidget):
                                                           'being.', QMessageBox.Ok)
             return
         self.fit_scale=self.fitScaleComboBox.currentText()
+        try:
+            self.fit.functionCalled.disconnect()
+        except:
+            pass
         if self.fit_method!='emcee':
             self.fit.functionCalled.connect(self.fitCallback)
         else:
@@ -726,7 +736,7 @@ class XModFit(QWidget):
             if self.fit.params['__mpar__']!={}:
                 self.oldmpar=copy.copy(self.mfitParamData)
             try:
-                self.showFitInfoDlg(emcee_steps=emcee_steps, emcee_burn = emcee_burn)
+                self.showFitInfoDlg(emcee_walker=emcee_walker,emcee_steps=emcee_steps, emcee_burn = emcee_burn)
                 self.runFit(emcee_walker=emcee_walker, emcee_steps=emcee_steps, emcee_burn=emcee_burn,
                             emcee_cores=emcee_cores, reuse_sampler=reuse_sampler)
                 if self.fit_stopped:
@@ -843,7 +853,8 @@ class XModFit(QWidget):
     def confInterval_emcee(self):
         """
         """
-        multiInputDlg=MultiInputDialog(inputs={'MCMC Walker':100,'MCMC Steps':100, 'MCMC Burn':10, 'Parallel Cores':1,'Re-use Sampler':False},parent=self)
+        multiInputDlg=MultiInputDialog(inputs={'MCMC Walker':self.emcee_walker,'MCMC Steps':self.emcee_steps, 'MCMC Burn':self.emcee_burn,
+                                               'Parallel Cores':self.emcee_cores,'Re-use Sampler':self.reuse_sampler},parent=self)
         if not self.errorAvailable:
             multiInputDlg.inputFields['Re-use Sampler'].setDisabled(True)
         else:
@@ -929,7 +940,7 @@ class XModFit(QWidget):
     def fitErrorCallback(self, params, iterations, residual, fit_scale):
         time_taken=time.time()-self.start_time
         time_left=time_taken*(self.emcee_walker*self.emcee_steps-iterations)/iterations
-        self.fitInfoDlg.setLabelText('Please wait for %.3f mins'%(time_left/60))
+        self.fitInfoDlg.setLabelText('Time left (hh:mm:ss): %s'%(time.strftime('%H:%M:%S',time.gmtime(time_left))))
         self.fitInfoDlg.setValue(iterations)
         QApplication.processEvents()
         # QApplication.processEvents()
@@ -944,9 +955,10 @@ class XModFit(QWidget):
         values=[self.fit.result.params[name].value for name in names]
         fig = corner.corner(self.fit.result.flatchain[names], labels=names, bins=50,
                             truths = values, quantiles = [0.159, 0.5, 0.842], show_titles = True, title_fmt='.3f',
-                            use_math_text=True)
+                            use_math_text=True,title_kwargs={'fontsize':12},label_kwargs={'fontsize':12})
         for ax in fig.get_axes():
             ax.set_xlabel('')
+            # ax.set_ylabel('')
         dlg=QDialog(self)
         dlg.setWindowTitle('Error Estimates')
         dlg.resize(800, 600)
@@ -988,7 +1000,7 @@ class XModFit(QWidget):
         vblayout.addWidget(splitter)
         dlg.setWindowTitle('Parameter Errors')
         dlg.setModal(True)
-        dlg.show()
+        dlg.showMaximized()
         # QMessageBox.information(self, 'Parameter Errors', tabulate(mesg, headers='firstrow',stralign='right',numalign='right',tablefmt='rst'), QMessageBox.Ok)
 
     def saveParameterError(self, text=''):
@@ -2602,14 +2614,14 @@ class XModFit(QWidget):
 if __name__=='__main__':
     # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     # QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
-    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+    # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
     app = QApplication(sys.argv)
-    try:
-        # app.setAttribute(Qt.AA_EnableHighDpiScaling)
-        app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-    except:
-        pass
-    # app=QApplication(sys.argv)
+    # try:
+    #     # app.setAttribute(Qt.AA_EnableHighDpiScaling)
+    #     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    # except:
+    #     pass
+    # # app=QApplication(sys.argv)
     w=XModFit()
     w.setWindowTitle('XModFit')
     resolution = QDesktopWidget().screenGeometry()
