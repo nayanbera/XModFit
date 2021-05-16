@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QLineEdit, QVBoxLayout, QMessageBox, QCheckBox, \
     QComboBox, QListWidget, QDialog, QFileDialog, QAbstractItemView, QSplitter, QSizePolicy, QAbstractScrollArea, QHBoxLayout, QTextEdit, QShortcut,\
-    QProgressDialog, QDesktopWidget, QSlider, QTabWidget, QMenuBar, QAction, QTableWidgetSelectionRange
+    QProgressDialog, QDesktopWidget, QSlider, QTabWidget, QMenuBar, QAction, QTableWidgetSelectionRange, QProgressBar
 from PyQt5.QtGui import QKeySequence, QFont, QDoubleValidator, QIntValidator
 from PyQt5.QtCore import Qt, QProcess
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -826,10 +826,11 @@ class XModFit(QWidget):
                         self.undoFit()
                         self.calcConfInterButton.setEnabled(False)
                 else:
+                    self.errorAvailable = True
                     self.fit.functionCalled.disconnect()
                     self.fitErrorDialog()
-                    self.errorAvailable = True
                     self.showConfIntervalButton.setEnabled(True)
+                    print(self.fit.result.acceptance_fraction)
             except:
                 try:
                     self.closeFitInfoDlg()
@@ -856,8 +857,11 @@ class XModFit(QWidget):
         multiInputDlg=MultiInputDialog(inputs={'MCMC Walker':self.emcee_walker,'MCMC Steps':self.emcee_steps, 'MCMC Burn':self.emcee_burn,
                                                'Parallel Cores':self.emcee_cores,'Re-use Sampler':self.reuse_sampler},parent=self)
         if not self.errorAvailable:
+            multiInputDlg.inputFields['Re-use Sampler'].setChecked(False)
             multiInputDlg.inputFields['Re-use Sampler'].setDisabled(True)
+            self.reuse_sampler=False
         else:
+            multiInputDlg.inputFields['Re-use Sampler'].setEnabled(True)
             multiInputDlg.inputFields['Re-use Sampler'].setChecked(True)
         # multiInputDlg.show()
         if multiInputDlg.exec_():
@@ -895,17 +899,27 @@ class XModFit(QWidget):
             self.fitInfoDlg.setModal(True)
             self.fitInfoDlg.show()
         else:
-            self.fitInfoDlg=QProgressDialog("Please Wait for %.3f min"%0.0, "Cancel", 0, 100, self)
-            self.fitInfoDlg.setAutoClose(True)
-            self.fitInfoDlg.setMaximum(emcee_walker*emcee_steps)
-            self.fitInfoDlg.setValue(0)
-            self.fitInfoDlg.canceled.connect(self.stopFit)
+            self.fitInfoDlg = QDialog(self)
+            vblayout = QVBoxLayout(self.fitInfoDlg)
+            self.fitIterLabel = QLabel('Time left (hh:mm:ss): %s'%('N.A.'), self.fitInfoDlg)
+            vblayout.addWidget(self.fitIterLabel)
+            self.errProgBar=QProgressBar(self.fitInfoDlg)
+            self.errProgBar.setMaximum(emcee_walker*emcee_steps)
+            self.errProgBar.setMinimum(0)
+            self.errProgBar.setValue(0)
+            vblayout.addWidget(self.errProgBar)
+            self.stopFitPushButton = QPushButton('Stop')
+            vblayout.addWidget(self.stopFitPushButton)
+            self.stopFitPushButton.clicked.connect(self.stopFit)
+            self.fitInfoDlg.setWindowTitle('0% complete')
+            self.fitInfoDlg.setModal(True)
             self.fitInfoDlg.show()
         
     def stopFit(self):
         self.fit.fit_abort=True
         self.fit_stopped=True
         self.closeFitInfoDlg()
+        self.reuse_sampler=False
 
         
     def closeFitInfoDlg(self):
@@ -939,9 +953,12 @@ class XModFit(QWidget):
 
     def fitErrorCallback(self, params, iterations, residual, fit_scale):
         time_taken=time.time()-self.start_time
+        print(iterations, self.emcee_walker*self.emcee_steps)
+        frac=iterations/(self.emcee_walker*self.emcee_steps)
         time_left=time_taken*(self.emcee_walker*self.emcee_steps-iterations)/iterations
-        self.fitInfoDlg.setLabelText('Time left (hh:mm:ss): %s'%(time.strftime('%H:%M:%S',time.gmtime(time_left))))
-        self.fitInfoDlg.setValue(iterations)
+        self.fitIterLabel.setText('Time left (hh:mm:ss): %s'%(time.strftime('%H:%M:%S',time.gmtime(time_left))))
+        self.fitInfoDlg.setWindowTitle('%d%% complete'%(int(frac*100)))
+        self.errProgBar.setValue(iterations)
         QApplication.processEvents()
         # QApplication.processEvents()
 
@@ -974,6 +991,7 @@ class XModFit(QWidget):
         playout.addWidget(toolbar)
         plotWidget.setLayout(playout)
         splitter.addWidget(plotWidget)
+        fig.dpi=10
         fig.tight_layout()
         canvas.draw()
         statWidget=QWidget()
@@ -2614,13 +2632,13 @@ class XModFit(QWidget):
 if __name__=='__main__':
     # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     # QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
-    # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
     app = QApplication(sys.argv)
-    # try:
-    #     # app.setAttribute(Qt.AA_EnableHighDpiScaling)
-    #     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-    # except:
-    #     pass
+    try:
+        # app.setAttribute(Qt.AA_EnableHighDpiScaling)
+        app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    except:
+        pass
     # # app=QApplication(sys.argv)
     w=XModFit()
     w.setWindowTitle('XModFit')
