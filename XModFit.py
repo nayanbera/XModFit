@@ -1,11 +1,13 @@
 from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QLineEdit, QVBoxLayout, QMessageBox, QCheckBox, \
     QComboBox, QListWidget, QDialog, QFileDialog, QAbstractItemView, QSplitter, QSizePolicy, QAbstractScrollArea, QHBoxLayout, QTextEdit, QShortcut,\
-    QProgressDialog, QDesktopWidget, QSlider, QTabWidget, QMenuBar, QAction, QTableWidgetSelectionRange, QProgressBar
+    QProgressDialog, QDesktopWidget, QSlider, QTabWidget, QMenuBar, QAction, QTableWidgetSelectionRange, QProgressBar, QMenu
 from PyQt5.QtGui import QKeySequence, QFont, QDoubleValidator, QIntValidator
 from PyQt5.QtCore import Qt, QProcess
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
+import webbrowser, shutil
+from docx import Document
 import os
 import glob
 import sys
@@ -394,11 +396,60 @@ class XModFit(QWidget):
         col=0
         self.funcListWidget=QListWidget()
         self.funcListWidget.setSelectionMode(4)
+        self.funcListWidget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.funcListWidget.customContextMenuRequested.connect(self.funcListRightClicked)
         self.funcListWidget.itemSelectionChanged.connect(self.functionChanged)
         self.funcListWidget.itemDoubleClicked.connect(self.openFunction)
         self.funcLayoutWidget.addWidget(self.funcListWidget,row=row,col=col,colspan=2)
         
         self.funcDock.addWidget(self.funcLayoutWidget)
+
+    def funcListRightClicked(self,pos):
+        popMenu = QMenu()
+        showDet = QAction("Show Details", self)
+        addDet = QAction("Upload Details", self)
+        modDet = QAction("Creat/Modify Details", self)
+        popMenu.addAction(showDet)
+        popMenu.addAction(addDet)
+        popMenu.addAction(modDet)
+        showDet.triggered.connect(self.showDetails)
+        addDet.triggered.connect(self.addDetails)
+        modDet.triggered.connect(self.modifyDetails)
+        popMenu.exec_(self.funcListWidget.mapToGlobal(pos))
+
+    def showDetails(self):
+        url = os.path.join(os.path.curdir, 'Function_Details', self.categoryListWidget.currentItem().text(),
+                            self.funcListWidget.currentItem().text(),'help.pdf')
+        webbrowser.open_new_tab(url)
+        # os.system('C:/Users/mrinalkb/Desktop/ESH738.pdf')
+
+    def addDetails(self):
+        path=os.path.join(os.path.curdir,'Function_Details',self.categoryListWidget.currentItem().text(),self.funcListWidget.currentItem().text())
+        if os.path.exists(path):
+            fname = QFileDialog.getOpenFileName(self,caption='Select help file',directory=self.curDir,filter="Help files (*.docx *.pdf)")[0]
+            tfname=os.path.join(path,'help'+os.path.splitext(fname)[1])
+            shutil.copy(fname,tfname)
+        else:
+            os.makedirs(path)
+
+    def modifyDetails(self):
+        category=self.categoryListWidget.currentItem().text()
+        function=self.funcListWidget.currentItem().text()
+        path = os.path.join(os.path.curdir, 'Function_Details', category,
+                            function,'help.docx')
+        if os.path.exists(path):
+            webbrowser.open_new_tab(path)
+        else:
+            if not os.path.exists(os.path.dirname(path)):
+                os.makedirs(os.path.dirname(path))
+            doc=Document()
+            doc.add_heading('Details of %s/%s'%(category,function),0)
+            module = 'Functions.%s.%s' % (category,function)
+            text=getattr(self.curr_funcClass[module], function).__init__.__doc__
+            doc.add_paragraph(text)
+            doc.save(path)
+            webbrowser.open_new_tab(path)
+
         
     def addCategory(self):
         self.errorAvailable = False
