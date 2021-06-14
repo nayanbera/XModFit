@@ -420,7 +420,10 @@ class XModFit(QWidget):
     def showDetails(self):
         url = os.path.join(os.path.curdir, 'Function_Details', self.categoryListWidget.currentItem().text(),
                             self.funcListWidget.currentItem().text(),'help.pdf')
-        webbrowser.open_new_tab(url)
+        if os.path.exists(url):
+            webbrowser.open_new_tab(url)
+        else:
+            QMessageBox.warning(self,'File Error','The help files regarding the function details do not exist.',QMessageBox.Ok)
         # os.system('C:/Users/mrinalkb/Desktop/ESH738.pdf')
 
     def addDetails(self):
