@@ -2545,18 +2545,18 @@ class XModFit(QWidget):
                 for key in self.data[self.sfnames[-1]].keys():
                     x[key] = self.data[self.sfnames[-1]][key]['x']
                     y[key] = self.data[self.sfnames[-1]][key]['y']
-                    y[key] = y[key][np.argwhere(x[key] >= self.xmin)[0][0]:np.argwhere(x[key] <= self.xmax)[-1][0]]
+                    y[key] = y[key][np.argwhere(x[key] >= self.xmin)[0][0]:np.argwhere(x[key] <= self.xmax)[-1][0]+1]
                     yerr[key] = self.data[self.sfnames[-1]][key]['yerr']
-                    yerr[key] = yerr[key][np.argwhere(x[key] >= self.xmin)[0][0]:np.argwhere(x[key] <= self.xmax)[-1][0]]
-                    x[key] = x[key][np.argwhere(x[key]>=self.xmin)[0][0]:np.argwhere(x[key]<=self.xmax)[-1][0]]
+                    yerr[key] = yerr[key][np.argwhere(x[key] >= self.xmin)[0][0]:np.argwhere(x[key] <= self.xmax)[-1][0]+1]
+                    x[key] = x[key][np.argwhere(x[key]>=self.xmin)[0][0]:np.argwhere(x[key]<=self.xmax)[-1][0]+1]
             else:
                 key = list(self.data[self.sfnames[-1]].keys())[0]
                 x = self.data[self.sfnames[-1]][key]['x']
                 y = self.data[self.sfnames[-1]][key]['y']
-                y = y[np.argwhere(x >= self.xmin)[0][0]:np.argwhere(x <= self.xmax)[-1][0]]
+                y = y[np.argwhere(x >= self.xmin)[0][0]:np.argwhere(x <= self.xmax)[-1][0]+1]
                 yerr = self.data[self.sfnames[-1]][key]['yerr']
-                yerr = yerr[np.argwhere(x >= self.xmin)[0][0]:np.argwhere(x <= self.xmax)[-1][0]]
-                x = x[np.argwhere(x>=self.xmin)[0][0]:np.argwhere(x<=self.xmax)[-1][0]]
+                yerr = yerr[np.argwhere(x >= self.xmin)[0][0]:np.argwhere(x <= self.xmax)[-1][0]+1]
+                x = x[np.argwhere(x>=self.xmin)[0][0]:np.argwhere(x<=self.xmax)[-1][0]+1]
 
         if len(self.funcListWidget.selectedItems())>0:
             try:

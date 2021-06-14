@@ -523,7 +523,7 @@ class Data_Dialog(QDialog):
             self.removeColumnPushButton.setEnabled(True)
             return self.data                
         else:
-            QMessageBox.warning(self,'File Error','The file doesnot exists!')
+            QMessageBox.warning(self,'File Error','The file does not exists!')
             return None
         
     def fileUpdated(self,fname):
@@ -659,7 +659,10 @@ class Data_Dialog(QDialog):
                 #     self.plotSetupTableWidget.cellWidget(row,3).setCurrentIndex(2)
                 # except:
                 #
-                self.plotSetupTableWidget.cellWidget(row,3).setCurrentIndex(0)
+                if len(columns)>2:
+                    self.plotSetupTableWidget.cellWidget(row,3).setCurrentIndex(3)
+                else:
+                    self.plotSetupTableWidget.cellWidget(row, 3).setCurrentIndex(0)
             self.plotSetupTableWidget.cellWidget(row,3).currentIndexChanged.connect(self.updateCellData)
             self.plotSetupTableWidget.setCurrentCell(row,3)
             self.updatePlotData(row,3)
