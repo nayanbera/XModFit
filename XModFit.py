@@ -2201,7 +2201,8 @@ class XModFit(QWidget):
     def update_mfit_parameters_new(self):
         self.mfitParamTabWidget.currentChanged.disconnect()
         if '__mpar__' in self.fit.params.keys() and self.fit.params['__mpar__']!={}:
-            self.mfitParamCoupledCheckBox.setEnabled(True)
+            if len(self.fit.params['__mpar__'])>1:
+                self.mfitParamCoupledCheckBox.setEnabled(True)
             # self.mfitParamCoupledCheckBox.setCheckState(Qt.Unchecked)
             self.mfitParamTableWidget = {}
             self.mfitParamData = {}
