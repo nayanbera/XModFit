@@ -408,7 +408,7 @@ class XModFit(QWidget):
         popMenu = QMenu()
         showDet = QAction("Show Details", self)
         addDet = QAction("Upload Details", self)
-        modDet = QAction("Creat/Modify Details", self)
+        modDet = QAction("Create/Modify Details", self)
         popMenu.addAction(showDet)
         popMenu.addAction(addDet)
         popMenu.addAction(modDet)
