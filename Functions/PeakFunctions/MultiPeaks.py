@@ -110,6 +110,6 @@ class MultiPeaks: #Please put the class name same as the function name
 
 
 if __name__=='__main__':
-    x=np.arange(0.001,1.0,0.1)
+    x=np.arange(0.001,1.0,0.01)
     fun=MultiPeaks(x=x)
     print(fun.y())

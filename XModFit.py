@@ -236,11 +236,11 @@ class XModFit(QWidget):
         self.emcee_frac = self.emcee_burn/self.emcee_steps
         self.reuse_sampler = False
 
-        self.funcDock=Dock('Functions',size=(1,6),closable=False)
-        self.fitDock=Dock('Fit options',size=(1,2),closable=False)
-        self.dataDock=Dock('Data',size=(1,8),closable=False)
-        self.paramDock=Dock('Parameters',size=(2,8),closable=False)
-        self.plotDock=Dock('Data and Fit',size=(5,8),closable=False)
+        self.funcDock=Dock('Functions',size=(1,6),closable=False,hideTitle=False)
+        self.fitDock=Dock('Fit options',size=(1,2),closable=False,hideTitle=False)
+        self.dataDock=Dock('Data',size=(1,8),closable=False,hideTitle=False)
+        self.paramDock=Dock('Parameters',size=(2,8),closable=False,hideTitle=False)
+        self.plotDock=Dock('Data and Fit',size=(5,8),closable=False,hideTitle=False)
         self.mainDock.addDock(self.dataDock)
         self.mainDock.addDock(self.fitDock,'bottom')
         self.mainDock.addDock(self.paramDock,'right')
@@ -608,14 +608,14 @@ class XModFit(QWidget):
             xmax=np.max([np.max([np.max(self.data[key][k1]['x']) for k1 in self.data[key].keys()]) for key in self.sfnames])
             self.xminmaxLineEdit.setText('%0.3f:%0.3f'%(xmin,xmax))
             self.xminmaxChanged()
-            if len(self.data[self.sfnames[-1]].keys())>1:
-                text='{'
-                for key in self.data[self.sfnames[-1]].keys():
-                    text+='"'+key+'":np.linspace(%.3f,%.3f,%d),'%(xmin,xmax,100)
-                text=text[:-1]+'}'
-            else:
-                text='np.linspace(%.3f,%.3f,100)'%(xmin,xmax)
-            self.xLineEdit.setText(text)
+            # if len(self.data[self.sfnames[-1]].keys())>1:
+            #     text='{'
+            #     for key in self.data[self.sfnames[-1]].keys():
+            #         text+='"'+key+'":np.linspace(%.3f,%.3f,%d),'%(xmin,xmax,100)
+            #     text=text[:-1]+'}'
+            # else:
+            #     text='np.linspace(%.3f,%.3f,100)'%(xmin,xmax)
+            # self.xLineEdit.setText(text)
             self.fitButton.setEnabled(True)
         else:
             self.fitButton.setEnabled(False)
@@ -1000,7 +1000,7 @@ class XModFit(QWidget):
             if self.fit.emcee_params[key].vary:
                 l,p,r = np.percentile(self.fit.result.flatchain[key], [5, 50, 95])
                 mesg.append([key, p, l-p, r-p])
-        names=[name for name in self.fit.result.var_names if name!='__lnsigma']
+        names=[name for name in self.fit.result.var_names]# if name!='__lnsigma']
         values=[self.fit.result.params[name].value for name in names]
         # fig = corner.corner(self.fit.result.flatchain[names], labels=names, bins=50,
         #                     truths = values, quantiles = [0.159, 0.5, 0.842], show_titles = True, title_fmt='.3f',
@@ -1741,6 +1741,7 @@ class XModFit(QWidget):
             fh.write('#File saved on %s\n'%time.asctime())
             fh.write('#Category: %s\n'%self.categoryListWidget.currentItem().text())
             fh.write('#Function: %s\n'%self.funcListWidget.currentItem().text())
+            fh.write('#Xrange=%s\n'%self.xLineEdit.text())
             fh.write('#Fit Range=%s\n'%self.xminmaxLineEdit.text())
             fh.write('#Fit Method=%s\n'%self.fitMethodComboBox.currentText())
             fh.write('#Fit Scale=%s\n'%self.fitScaleComboBox.currentText())
@@ -1829,7 +1830,9 @@ class XModFit(QWidget):
                     sfline=None
                     mfline=None
                     for line in lines[3:]:
-                        if '#Fit Range=' in line:
+                        if '#Xrange=' in line:
+                            self.xLineEdit.setText(line.strip().split('=')[1])
+                        elif '#Fit Range=' in line:
                             self.xminmaxLineEdit.setText(line.strip().split('=')[1])
                             fline=lnum+1
                         elif '#Fit Method=' in line:
@@ -1927,6 +1930,7 @@ class XModFit(QWidget):
                         mkey=self.mfitParamTabWidget.tabText(i)
                         self.mfitParamTableWidget[mkey].cellChanged.connect(self.mfitParamChanged_new)
                     self.xminmaxChanged()
+                    self.xChanged()
                     self.errorAvailable=False
                     self.reuse_sampler=False
                     self.calcConfInterButton.setEnabled(False)
@@ -2545,24 +2549,25 @@ class XModFit(QWidget):
                 for key in self.data[self.sfnames[-1]].keys():
                     x[key] = self.data[self.sfnames[-1]][key]['x']
                     y[key] = self.data[self.sfnames[-1]][key]['y']
-                    y[key] = y[key][np.argwhere(x[key] >= self.xmin)[0][0]:np.argwhere(x[key] <= self.xmax)[-1][0]]
+                    y[key] = y[key][np.argwhere(x[key] >= self.xmin)[0][0]:np.argwhere(x[key] <= self.xmax)[-1][0]+1]
                     yerr[key] = self.data[self.sfnames[-1]][key]['yerr']
-                    yerr[key] = yerr[key][np.argwhere(x[key] >= self.xmin)[0][0]:np.argwhere(x[key] <= self.xmax)[-1][0]]
-                    x[key] = x[key][np.argwhere(x[key]>=self.xmin)[0][0]:np.argwhere(x[key]<=self.xmax)[-1][0]]
+                    yerr[key] = yerr[key][np.argwhere(x[key] >= self.xmin)[0][0]:np.argwhere(x[key] <= self.xmax)[-1][0]+1]
+                    x[key] = x[key][np.argwhere(x[key]>=self.xmin)[0][0]:np.argwhere(x[key]<=self.xmax)[-1][0]+1]
             else:
                 key = list(self.data[self.sfnames[-1]].keys())[0]
                 x = self.data[self.sfnames[-1]][key]['x']
                 y = self.data[self.sfnames[-1]][key]['y']
-                y = y[np.argwhere(x >= self.xmin)[0][0]:np.argwhere(x <= self.xmax)[-1][0]]
+                y = y[np.argwhere(x >= self.xmin)[0][0]:np.argwhere(x <= self.xmax)[-1][0]+1]
                 yerr = self.data[self.sfnames[-1]][key]['yerr']
-                yerr = yerr[np.argwhere(x >= self.xmin)[0][0]:np.argwhere(x <= self.xmax)[-1][0]]
-                x = x[np.argwhere(x>=self.xmin)[0][0]:np.argwhere(x<=self.xmax)[-1][0]]
+                yerr = yerr[np.argwhere(x >= self.xmin)[0][0]:np.argwhere(x <= self.xmax)[-1][0]+1]
+                x = x[np.argwhere(x>=self.xmin)[0][0]:np.argwhere(x<=self.xmax)[-1][0]+1]
 
         if len(self.funcListWidget.selectedItems())>0:
             try:
-                stime=time.time()
+                stime=time.perf_counter()
                 self.fit.evaluate()
-                exectime=time.time()-stime
+                ntime=time.perf_counter()
+                exectime=ntime-stime
             except:
                 QMessageBox.warning(self, 'Evaluation Error', traceback.format_exc(), QMessageBox.Ok)
                 self.fit.yfit = self.fit.func.x

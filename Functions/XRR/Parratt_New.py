@@ -129,6 +129,18 @@ class Parratt_New: #Please put the class name same as the function name
         return wholesld
 
     @lru_cache(maxsize=10)
+    def stepFun(self,zmin,zmax,d,rho,beta):
+        tdata=[[zmin,rho[0],beta[0]]]
+        z=np.cumsum(d)
+        for i, td in enumerate(d[:-1]):
+            tdata.append([z[i],rho[i],beta[i]])
+            tdata.append([z[i],rho[i+1],beta[i+1]])
+        tdata.append([zmax,rho[-1],beta[-1]])
+        tdata=np.array(tdata)
+        return tdata[:,0], tdata[:,1], tdata[:,2]
+
+
+    @lru_cache(maxsize=10)
     def py_parratt(self, x, lam, d, rho, beta):
         return parratt_numba(np.array(x), lam, np.array(d), np.array(rho), np.array(beta))
         # return parratt(np.array(x), lam, np.array(d), np.array(rho), np.array(beta))
@@ -164,8 +176,15 @@ class Parratt_New: #Please put the class name same as the function name
         n, z, d, rho, beta = self.calcProfile(self.__d__[mkey], self.__rho__[mkey],
                                                                                 self.__beta__[mkey], self.__sig__[mkey],
                                                                                 mkey, self.Minstep)
-        self.output_params['%s_EDP' % self.__mkeys__[0]] = {'x': z, 'y': rho, 'names':['z, \u212B','\u03c1, el/\u212B<sup>3</sup>']}
-        self.output_params['%s_ADP' % self.__mkeys__[0]] = {'x': z, 'y': beta, 'names':['z, \u212B','Beta']}
+        if not self.__fit__:
+            tz,trho,tbeta=self.stepFun(z[0],z[-1],self.__d__[mkey],self.__rho__[mkey],self.__beta__[mkey])
+            self.output_params['%s_EDP' % self.__mkeys__[0]] = {'x': z, 'y': rho, 'names':['z, \u212B','\u03c1, el/\u212B<sup>3</sup>']}
+            self.output_params['%s_dEDP' % self.__mkeys__[0]] = {'x': z[:-1], 'y': np.diff(rho)/self.Minstep,
+                                                                'names': ['z, \u212B', 'd\u03c1/dz, el/\u212B<sup>4</sup>']}
+            self.output_params['%s_step_EDP' % self.__mkeys__[0]]={'x': tz, 'y': trho, 'names':['z, \u212B','\u03c1, el/\u212B<sup>3</sup>']}
+            self.output_params['%s_ADP' % self.__mkeys__[0]] = {'x': z, 'y': beta, 'names':['z, \u212B','Beta']}
+            self.output_params['%s_ADP' % self.__mkeys__[0]] = {'x': z[:-1], 'y': np.diff(beta)/self.Minstep, 'names': ['z, \u212B', 'dBeta/dz']}
+            self.output_params['%s_step_ADP' % self.__mkeys__[0]] = {'x': tz, 'y': tbeta, 'names':['z, \u212B','Beta']}
         refq, r2 = self.py_parratt(tuple(x), lam, tuple(d), tuple(rho), tuple(beta))
         if self.rrf:
             rhos = (self.params['__%s_rho_000'%(mkey)].value, self.params['__%s_rho_%03d' % (mkey,n - 1)].value)

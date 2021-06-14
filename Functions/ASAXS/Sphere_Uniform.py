@@ -179,6 +179,7 @@ class Sphere_Uniform: #Please put the class name same as the function name
         """
         Define the function in terms of x to return some value
         """
+        scale = 1e27 / 6.022e23
         svol = 1.5 * 0.0172 ** 2 / 370 ** 2  # scattering volume in cm^3
         self.output_params = {'scaler_parameters': {}}
         self.update_params()
@@ -219,9 +220,12 @@ class Sphere_Uniform: #Please put the class name same as the function name
                 self.output_params['Total'] = {'x': self.x[key], 'y': total}
                 for key in self.x.keys():
                     self.output_params[key] = {'x': self.x[key], 'y': sqf[key]}
-                self.output_params['rho_r'] = {'x': rhor[:, 0], 'y': rhor[:, 1]}
-                self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1]}
-                self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1]}
+                self.output_params['rho_r'] = {'x': rhor[:, 0], 'y': rhor[:, 1],
+                                               'names': ['r (Angs)', 'Electron Density (el/Angs^3)']}
+                self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1],
+                                                 'names': ['r (Angs)', 'Electron Density (el/Angs^3)']}
+                self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1] * scale,
+                                                    'names': ['r (Angs)', 'Density (Molar)']}  # in Molar
                 self.output_params['Structure_Factor'] = {'x': self.x[key], 'y': struct}
                 xtmp, ytmp = create_steps(x=self.__R__[:-1], y=self.__Rmoles__[:-1])
                 self.output_params['Rmoles_radial'] = {'x': xtmp, 'y': ytmp}
@@ -251,9 +255,12 @@ class Sphere_Uniform: #Please put the class name same as the function name
             self.output_params['Resonant-term'] = {'x': self.x, 'y': asqf}
             self.output_params['SAXS-term'] = {'x': self.x, 'y': eisqf}
             self.output_params['Cross-term'] = {'x': self.x, 'y': csqf}
-            self.output_params['rho_r'] = {'x': rhor[:, 0], 'y': rhor[:, 1]}
-            self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1]}
-            self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1]}
+            self.output_params['rho_r'] = {'x': rhor[:, 0], 'y': rhor[:, 1],
+                                           'names': ['r (Angs)', 'Electron Density (el/Angs^3)']}
+            self.output_params['eirho_r'] = {'x': eirhor[:, 0], 'y': eirhor[:, 1],
+                                             'names': ['r (Angs)', 'Electron Density (el/Angs^3)']}
+            self.output_params['adensity_r'] = {'x': adensityr[:, 0], 'y': adensityr[:, 1] * scale,
+                                                'names': ['r (Angs)', 'Density (Molar)']}  # in Molar
             self.output_params['Structure_Factor'] = {'x': self.x, 'y': struct}
             xtmp, ytmp = create_steps(x=self.__R__[:-1], y=self.__Rmoles__[:-1])
             self.output_params['Rmoles_radial'] = {'x': xtmp, 'y': ytmp}
