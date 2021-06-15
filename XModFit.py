@@ -934,7 +934,6 @@ class XModFit(QWidget):
             self.emcee_walker=(self.fit.result.nvarys+1)*5
         else:
             # try:
-            print(self.fit.result.var_names)
             tnum=len(self.fit.result.flatchain[self.fit.result.var_names[0]])/self.emcee_walker
             self.emcee_frac=self.emcee_burn/(tnum/(1.0-self.emcee_frac))
             emcee_burn=tnum*self.emcee_frac/(1.0-self.emcee_frac)
@@ -1079,7 +1078,7 @@ class XModFit(QWidget):
         plotWidget.setLayout(playout)
         splitter.addWidget(plotWidget)
         corner.corner(self.fit.result.flatchain[names], labels=names, bins=50,
-                      truths=values, quantiles=[0.159, 0.5, 0.842], show_titles=True, title_fmt='.3f',
+                      truths=values, quantiles=[0.05, 0.5, 0.95], show_titles=True, title_fmt='.3f',
                       use_math_text=True, title_kwargs={'fontsize': 3*12/ndim}, label_kwargs={'fontsize': 3*12/ndim},fig=canvas.figure)
         for ax in canvas.figure.get_axes():
             ax.set_xlabel('')
@@ -2524,7 +2523,7 @@ class XModFit(QWidget):
                         else:
                             var=[]
                             for k in self.fit.params['output_params'][key].keys():
-                                if k!='names':
+                                if k!='names' and k!='plotType':
                                     var.append(k)
                             self.genParamListWidget.addItem(str(key) + ' : ' + str(var))
                     if not self.fchanged:
@@ -2666,7 +2665,7 @@ class XModFit(QWidget):
                     else:
                         var = []
                         for k in self.fit.params['output_params'][key].keys():
-                            if k != 'names':
+                            if k != 'names' and k != 'plotType':
                                 var.append(k)
                         self.genParamListWidget.addItem(
                             str(key) + ' : ' + str(var))
@@ -2762,6 +2761,9 @@ class XModFit(QWidget):
                     else:
                         self.extra_param_1DplotWidget.setXLabel('x',fontsize=5)
                         self.extra_param_1DplotWidget.setYLabel('y',fontsize=5)
+                    if 'plotType' in self.fit.params['output_params'][txt]:
+                        if self.fit.params['output_params'][txt]['plotType']=='step':
+                            self.extra_param_1DplotWidget.data[txt].opts['stepMode']='left'
                     fdata.append(txt)
         self.extra_param_1DplotWidget.Plot(fdata)
         self.gen_param_items=[item.text() for item in self.genParamListWidget.selectedItems()]

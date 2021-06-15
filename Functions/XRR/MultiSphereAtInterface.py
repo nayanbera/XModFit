@@ -36,9 +36,9 @@ def parratt_numba(q,lam,d,rho,beta):
 
 class MultiSphereAtInterface: #Please put the class name same as the function name
     def __init__(self,x=0.1,E=10.0,Rc=10.0,rhoc=4.68,Tsh=20.0,rhosh=0.0,rhoup=0.333,rhodown=0.38,sig=3.0,
-                 mpar={'Layers':{'Layers':['Layer 1'],'Z0':[20],'cov':[1.0],'Z0sig':[0.0]}},rrf=True,qoff=0.0,zmin=-10,zmax=100,dz=1.0):
+                 mpar={'Multilayer':{'Layers':['Layer_1'],'Z0':[20],'cov':[1.0],'Z0sig':[0.0]}},rrf=True,qoff=0.0,zmin=-50,zmax=100,dz=1.0):
         """
-        Calculates X-ray reflectivity from multilayers of core-shell spherical nanoparticles assembled near an interface
+        Calculates X-ray reflectivity from multilayers of core-shell spherical nanoparticles assembled at an interface
         x       	: array of wave-vector transfer along z-direction
         E      	: Energy of x-rays in inverse units of x
         Rc     	: Radius of the core of the nanoparticles
@@ -177,11 +177,11 @@ class MultiSphereAtInterface: #Please put the class name same as the function na
         z,d,rho=self.calcProfile(self.Rc,self.rhoc,self.rhosh,self.__Z0__,self.__cov__,self.__Z0sig__,self.Tsh,self.rhoup,self.rhodown,
                          self.sig,self.zmin,self.zmax,self.dz)
         if not self.__fit__:
-            self.output_params['Total density profile']={'x':z,'y':rho, 'names':['z, \u212B','\u03c1, el/\u212B<sup>3</sup>']}
+            self.output_params['Total_EDP']={'x':z,'y':rho, 'names':['z (\u212B)','\u03c1, (el/\u212B<sup>3</sup>)'],'plotType':'step'}
             for i in range(len(self.__Z0__)):
                 rhonp=self.NpRhoGauss(tuple(z),Rc=self.Rc,rhoc=self.rhoc,Tsh=self.Tsh,rhosh=self.rhosh,Z0=tuple([self.__Z0__[i]]),
                                     cov=tuple([self.__cov__[i]]),Z0sig=tuple([self.__Z0sig__[i]]),rhoup=self.rhoup,rhodown=self.rhodown,sig=self.sig)
-                self.output_params['Layer %d contribution'%(i+1)]={'x':z,'y':rhonp,'names':['z, \u212B','\u03c1, el/\u212B<sup>3</sup>']}
+                self.output_params['Layer_%d_EDP'%(i+1)]={'x':z,'y':rhonp,'names':['z (\u212B)','\u03c1 (el/\u212B<sup>3</sup>)'],'plotType':'step'}
         x=self.x+self.qoff
         lam=6.62607004e-34*2.99792458e8*1e10/self.E/1e3/1.60217662e-19
         refq,r2=self.py_parratt(tuple(x),lam,tuple(d),tuple(rho),tuple(np.zeros_like(rho)))
