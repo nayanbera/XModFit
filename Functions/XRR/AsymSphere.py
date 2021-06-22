@@ -45,10 +45,10 @@ def parratt_numba(q,lam,d,rho,beta):
 class AsymSphere: #Please put the class name same as the function name
     def __init__(self,x = 0.1, E = 10.0, R0 = 25.00, rhoc = 4.68, D = 66.6, rhosh = 0.200, h1 = -25.0, h1sig = 0.0, h2 = 3.021,
                  sig = 3.0, cov = 0.901, fix_sig = False,
-                 mpar={'Multilayer':{'Layers':['top', 'bottom'], 'd':[0.0,1.0],'rho':[0.0,0.334],'beta':[0.0,0.0],'sig':[0.0,3.00]}},
+                 mpar={'AdLayer':{'Layers':['top', 'bottom'], 'd':[0.0,1.0],'rho':[0.0,0.334],'beta':[0.0,0.0],'sig':[0.0,3.00]}},
                  rrf = True, qoff=0.0,zmin=-120,zmax=120,dz=1,coherrent=False,yscale=1.0,bkg=0.0):
         """
-        Calculates X-ray reflectivity from multilayers of core-shell spherical nanoparticles assembled near an interface
+        Calculates coherrently or incoherrenly added of X-ray reflectivity from monolayer of core-shell spherical nanoparticles with an additional layered material (lipids) co-assembled at an interface
         x         : array of wave-vector transfer along z-direction
         E      	  : Energy of x-rays in inverse units of x
         Rc     	  : Radius of the core of the nanoparticles
@@ -56,6 +56,7 @@ class AsymSphere: #Please put the class name same as the function name
         D         : Separation between Nanoparticles
         h1        : Distance between the center for the core and the interface
         h1sig     : width of the Fluctuations in h1
+        h2        : Distance between the interface and the lowest surface of the core-shell nanoparticles
         rhosh  	  : Electron Density of the outer shell. If 0, the electron density the shell region will be assumed to be filled by the bulk phases depending upon the position of the nanoparticles
         sig       : Roughness of the interface
         mpar      : The monolayer parameters where, Layers: Layer description, d: thickness of each layer, rho:Electron density of each layer, beta: Absorption coefficient of each layer, sig: roughness of interface separating each layer. The upper and lower thickness should be always  fixed. The roughness of the topmost layer should be always kept 0.
@@ -68,7 +69,7 @@ class AsymSphere: #Please put the class name same as the function name
         yscale    : a scale factor for R or R/Rf
         bkg       : in-coherrent background
         cov       : coverage of nanoparticles
-        coherrent : True or False for coherrent or in-coherrent addition of reflectivities from nanoparticles and lipid layer
+        coherrent : True or False for coherrent or in-coherrent addition of reflectivities from nanoparticles and additional layered material
         """
         if type(x)==list:
             self.x=np.array(x)
@@ -112,7 +113,7 @@ class AsymSphere: #Please put the class name same as the function name
         self.params.add('D', value=self.D,vary=0,min=0,max=np.inf,expr=None,brute_step=0.1)
         self.params.add('h1', value = self.h1, vary = 0, min=-np.inf, max=np.inf, expr = None, brute_step=0.1)
         self.params.add('h1sig', value=self.h1sig, vary=0, min=0, max=np.inf, expr=None, brute_step=0.1)
-        self.params.add('h2',value=self.h2,vary=1,min=0,max=7.338,expr=None,brute_step=0.1)
+        self.params.add('h2',value=self.h2,vary=1,min=0,max=np.inf,expr=None,brute_step=0.1)
         self.params.add('rhosh',value=self.rhosh,vary=0,min=0,max=np.inf,expr=None,brute_step=0.1)
         self.params.add('sig',value=self.sig,vary=0,min=0,max=np.inf,expr=None,brute_step=0.1)
         self.params.add('cov',value=self.cov,vary=0,min=0.00,max=1,expr=None,brute_step=0.1)
@@ -208,7 +209,7 @@ class AsymSphere: #Please put the class name same as the function name
         """
         # n = len(d)
         # maxsig = max(np.abs(np.max(sig[1:])), 3)
-        # Nlayers = int((np.sum(d[:-1]) + 10 * maxsig) / self.Minstep)
+        # Nlayers = int((np.sum(d[:-1]) + 10 * maxsig) / self.dz)
         # halfstep = (np.sum(d[:-1]) + 10 * maxsig) / 2 / Nlayers
         __z2__ = np.arange(zmin,zmax,dz)#np.linspace(-5 * maxsig + halfstep, np.sum(d[:-1]) + 5 * maxsig - halfstep, Nlayers)
         __d2__=dz*np.ones_like(__z2__)
@@ -267,10 +268,10 @@ class AsymSphere: #Please put the class name same as the function name
         refq=self.cov*refq1+(1-self.cov)*refq2
         crefq=np.abs(self.cov*r1+(1-self.cov)*r2)**2
         if not self.__fit__:
-            self.output_params['Nanoparticle EDP'] = {'x': z1, 'y': rho1,
-                                                      'names': ['z (Angs)', 'Electron Density (el/Angs^3)']}
-            self.output_params['Monolayer EDP'] = {'x': z2, 'y': rho2, 'names':['z (Angs)','Electron Density (el/Angs^3)']}
-            self.output_params['Monolayer ADP'] = {'x': z2, 'y': beta2, 'names':['z (Angs)','Beta']}
+            self.output_params['Nanoparticle_EDP'] = {'x': z1, 'y': rho1,
+                                                      'names': ['z (\u212B)', 'Electron Density (el/\u212B<sup>-1</sup>)'],'plotType':'step'}
+            self.output_params['Monolayer_EDP'] = {'x': z2, 'y': rho2, 'names':['z (u\212B)','Electron Density (el/\u212B<sup>-1</sup>)'],'plotType':'step'}
+            self.output_params['Monolayer_ADP'] = {'x': z2, 'y': beta2, 'names':['z (u\212B)','Beta'],'plotType':'step'}
 
         if self.rrf:
             rhos1=(rho1[0],rho1[-1])

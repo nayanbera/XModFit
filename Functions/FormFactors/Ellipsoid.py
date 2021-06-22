@@ -87,7 +87,6 @@ class Ellipsoid:
         """
         Computes the form factor of an ellipsoid
         """
-        self.output_params={'scaler_paramters':{}}
         return self.norm*self.ellipsoid_dist(tuple(self.x),self.R,self.Rsig,self.dist,self.aspect,self.Nalf,self.Np)+self.bkg
 
 if __name__=='__main__':

@@ -35,17 +35,17 @@ def parratt_numba(q,lam,d,rho,beta):
         refc[j]=r
     return ref,r
 
-class Parratt_Biphasic: #Please put the class name same as the function name
+class XLayers_Biphasic: #Please put the class name same as the function name
     def __init__(self,x=0.1,E=10.0,mpar={'Phase1':{'Layers':['top','bottom'],'d':[0.0,1.0],'rho':[0.0,0.333],'beta':[0.0,0.0],'sig':[0.0,3.0]},
                                          'Phase2':{'Layers':['top','bottom'],'d':[0.0,1.0],'rho':[0.0,0.333],'beta':[0.0,0.0],'sig':[0.0,3.0]}},
-                 Minstep=0.5, rrf=True, fix_sig=False, qoff=0.0, yscale=1,cov1=0.5, bkg=0.0, coherrent=True, aveed=True):
+                 dz=0.5, rrf=True, fix_sig=False, qoff=0.0, yscale=1,cov1=0.5, bkg=0.0, coherrent=True, aveed=True):
         """
         Calculates X-ray reflectivity from a system of multiple layers using Parratt formalism
 
         x     	 : array of wave-vector transfer along z-direction
         E     	 : Energy of x-rays in invers units of x
         mpar  	 : Dictionary of Phases where, Layers: Layer description, d: thickness of each layer, rho:Electron density of each layer, beta: Absorption coefficient of each layer, sig: roughness of interface separating each layer. The upper and lower thickness should be always  fixed. The roughness of the topmost layer should be always kept 0.
-        Minstep  :The thickness (Angstrom) of each layer for applying Parratt formalism
+        dz  :The thickness (Angstrom) of each layer for applying Parratt formalism
         rrf   	 : True for Frensnel normalized refelctivity and False for just reflectivity
         qoff  	 : q-offset to correct the zero q of the instrument
         cov1     : The coverage of Phase1 the value should be between 0 and 1
@@ -60,7 +60,7 @@ class Parratt_Biphasic: #Please put the class name same as the function name
             self.x=x
         self.E=E
         self.__mpar__=mpar
-        self.Minstep=Minstep
+        self.dz=dz
         self.rrf=rrf
         self.fix_sig=fix_sig
         self.qoff=qoff
@@ -97,7 +97,7 @@ class Parratt_Biphasic: #Please put the class name same as the function name
                         self.params.add('__%s_%s_%03d' % (mkey,key, i), value=self.__mpar__[mkey][key][i], vary=0, min=0, max=np.inf, expr=None, brute_step=0.05)
 
     @lru_cache(maxsize=10)
-    def calcProfile(self,d,rho,beta,sig,phase,minstep,zmin=None,zmax=None):
+    def calcProfile(self,d,rho,beta,sig,phase,dz,zmin=None,zmax=None):
         """
         Calculates the electron and absorption density profiles
         """
@@ -111,12 +111,12 @@ class Parratt_Biphasic: #Please put the class name same as the function name
         n=len(d)
         if zmin is None and zmax is None:
             maxsig=max(np.abs(np.max(sig[1:])),3)
-            Nlayers=int((np.sum(d[:-1])+10*maxsig)/minstep)
+            Nlayers=int((np.sum(d[:-1])+10*maxsig)/dz)
             halfstep=(np.sum(d[:-1])+10*maxsig)/2/Nlayers
             __z__=np.linspace(-5*maxsig+halfstep,np.sum(d[:-1])+5*maxsig-halfstep,Nlayers)
             offset=0.0
         else:
-            Nlayers=int((zmax-zmin)/minstep)
+            Nlayers=int((zmax-zmin)/dz)
             __z__=np.linspace(zmin,zmax,Nlayers+1)
             offset=np.sum(d[:-1])
         __d__=np.diff(__z__)
@@ -176,7 +176,7 @@ class Parratt_Biphasic: #Please put the class name same as the function name
             for mkey in mkeys:
                 n[mkey],z[mkey],d[mkey],rho[mkey],beta[mkey]=self.calcProfile(self.__d__[mkey],self.__rho__[mkey],
                                                                               self.__beta__[mkey],self.__sig__[mkey],mkey,
-                                                                              self.Minstep)
+                                                                              self.dz)
                 refq[mkey],r2[mkey]=self.py_parratt(tuple(x),lam,tuple(d[mkey]),tuple(rho[mkey]),tuple(beta[mkey]))
                 if not self.__fit__:
                     self.output_params['%s_EDP' % mkey] = {'x': z[mkey]-np.sum(self.__d__[mkey][:-1]), 'y': rho[mkey]}
@@ -195,14 +195,14 @@ class Parratt_Biphasic: #Please put the class name same as the function name
                                                                                         self.__rho__[mkey],
                                                                                         self.__beta__[mkey],
                                                                                         self.__sig__[mkey], mkey,
-                                                                                        self.Minstep)
+                                                                                        self.dz)
                     refq[mkey], r2[mkey] = self.py_parratt(tuple(x), lam, tuple(d[mkey]), tuple(rho[mkey]),
                                                            tuple(beta[mkey]))
                     if not self.__fit__:
                         self.output_params['%s_EDP' % mkey] = {'x': z[mkey] - np.sum(self.__d__[mkey][:-1]),
-                                                               'y': rho[mkey]}
+                                                               'y': rho[mkey], 'names':['z (\u212B)','\u03c1 (el/\u212B<sup>3</sup>)'],'plotType':'step'}
                         self.output_params['%s_ADP' % mkey] = {'x': z[mkey] - np.sum(self.__d__[mkey][:-1]),
-                                                               'y': beta[mkey]}
+                                                               'y': beta[mkey], 'names':['z (\u212B)','Beta'],'plotType':'step'}
                 deld=np.sum(self.__d__[mkeys[0]][:-1])-np.sum(self.__d__[mkeys[1]][:-1])
                 refq = abs(np.exp(-1j*self.x*deld)*self.cov1 * r2[mkeys[0]] + (1.0 - self.cov1) * r2[mkeys[1]])**2
 
@@ -210,21 +210,21 @@ class Parratt_Biphasic: #Please put the class name same as the function name
                 maxsig=max(max(self.__sig__[mkeys[0]][1:]),max(self.__sig__[mkeys[1]][1:]))
                 zmin=-max(np.sum(self.__d__[mkeys[0]][:-1]),np.sum(self.__d__[mkeys[1]][:-1]))-5*maxsig
                 zmax=5*maxsig
-                Nlayers = int((zmax - zmin)/self.Minstep)
+                Nlayers = int((zmax - zmin)/self.dz)
                 for mkey in mkeys:
                     n[mkey], z[mkey], d[mkey], rho[mkey], beta[mkey] = self.calcProfile(self.__d__[mkey],
                                                                                         self.__rho__[mkey],
                                                                                         self.__beta__[mkey],
                                                                                         self.__sig__[mkey], mkey,
-                                                                                        self.Minstep,zmin=zmin,zmax=zmax)
+                                                                                        self.dz,zmin=zmin,zmax=zmax)
                     if not self.__fit__:
-                        self.output_params['%s_EDP' % mkey] = {'x': z[mkey], 'y': rho[mkey]}
-                        self.output_params['%s_ADP' % mkey] = {'x': z[mkey], 'y': beta[mkey]}
+                        self.output_params['%s_EDP' % mkey] = {'x': z[mkey], 'y': rho[mkey], 'names':['z (\u212B)','\u03c1 (el/\u212B<sup>3</sup>)'],'plotType':'step'}
+                        self.output_params['%s_ADP' % mkey] = {'x': z[mkey], 'y': beta[mkey], 'names':['z (\u212B)','Beta'],'plotType':'step'}
                 trho=self.cov1*rho[mkeys[0]]+(1-self.cov1)*rho[mkeys[1]]
                 tbeta = self.cov1*beta[mkeys[0]]+(1-self.cov1)*beta[mkeys[1]]
                 if not self.__fit__:
-                    self.output_params['Total_EDP'] = {'x': z[mkey], 'y': trho}
-                    self.output_params['Total_ADP'] = {'x': z[mkey], 'y': tbeta}
+                    self.output_params['Total_EDP'] = {'x': z[mkey], 'y': trho, 'names':['z (\u212B)','\u03c1 (el/\u212B<sup>3</sup>)'],'plotType':'step'}
+                    self.output_params['Total_ADP'] = {'x': z[mkey], 'y': tbeta, 'names':['z (\u212B)','Beta'],'plotType':'step'}
                 refq, r2 = self.py_parratt(tuple(x), lam, tuple(d[mkey]), tuple(trho), tuple(tbeta))
             if self.rrf:
                 rhos=(self.params['__%s_rho_000'%mkeys[0]].value,self.params['__%s_rho_%03d'%(mkeys[0],n[mkeys[0]]-1)].value)
@@ -236,5 +236,5 @@ class Parratt_Biphasic: #Please put the class name same as the function name
 
 if __name__=='__main__':
     x=np.linspace(0.001,1.0,100)
-    fun=Parratt_Biphasic(x=x)
+    fun=XLayers_Biphasic(x=x)
     print(fun.y())

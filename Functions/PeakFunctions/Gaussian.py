@@ -41,3 +41,8 @@ class Gaussian:
         self.output_params['scaler_parameters']['peak_position']=self.pos
         self.output_params['scaler_parameters']['peak_width']=2.35428*self.wid
         return self.gau(self.x,self.pos,self.wid,self.norm)+self.bkg
+
+if __name__=='__main__':
+    x=np.arange(0.001,1.0,0.01)
+    fun=Gaussian(x=x)
+    print(fun.y())

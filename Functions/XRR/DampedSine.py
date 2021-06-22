@@ -39,14 +39,14 @@ class DampedSine: #Please put the class name same as the function name
     def __init__(self, x=0.1, E=10.0, mpar={
         'Model': {'Layers': ['top', 'bottom'], 'd': [0.0, 1.0], 'rho': [0.0, 0.333], 'beta': [0.0, 0.0],
                    'sig': [0.0, 3.0]}},
-                 Minstep=0.5, rrf=True, fix_sig=False, qoff=0.0, yscale=1, amp=0.1, decay_len= 100, spacing= 10, z0=0, bkg=0.0):
+                 dz=0.5, rrf=True, fix_sig=False, qoff=0.0, yscale=1, amp=0.1, decay_len= 100, spacing= 10, z0=0, bkg=0.0):
         """
-        Calculates X-ray reflectivity from a system of multiple layers using Parratt formalism
+        Calculates X-ray reflectivity using Parratt formalism from a system with damped-sin wave density profile
 
         x     	: array of wave-vector transfer along z-direction
         E     	: Energy of x-rays in invers units of x
         mpar  	: Dictionary of Phases where, Layers: Layer description, d: thickness of each layer, rho:Electron density of each layer, beta: Absorption coefficient of each layer, sig: roughness of interface separating each layer. The upper and lower thickness should be always  fixed. The roughness of the topmost layer should be always kept 0.
-        Minstep 	: The thickness (Angstrom) of each layer for applying Parratt formalism
+        dz 	: The thickness (Angstrom) of each layer for applying Parratt formalism
         rrf   	: True for Frensnel normalized refelctivity and False for just reflectivity
         qoff  	: q-offset to correct the zero q of the instrument
         yscale  : a scale factor for R or R/Rf
@@ -62,7 +62,7 @@ class DampedSine: #Please put the class name same as the function name
             self.x = x
         self.E = E
         self.__mpar__ = mpar
-        self.Minstep = Minstep
+        self.dz = dz
         self.rrf = rrf
         self.fix_sig = fix_sig
         self.qoff = qoff
@@ -103,7 +103,7 @@ class DampedSine: #Please put the class name same as the function name
                                         min=0, max=np.inf, expr=None, brute_step=0.05)
 
     @lru_cache(maxsize=2)
-    def calcProfile(self, d, rho, beta, sig, minstep, amp, decaylen, spacing, z0):
+    def calcProfile(self, d, rho, beta, sig, dz, amp, decaylen, spacing, z0):
         """
         Calculates the electron and absorption density profiles
         """
@@ -116,7 +116,7 @@ class DampedSine: #Please put the class name same as the function name
         offset = np.sum(d[:-1])
         zmin = -offset - 5 * maxsig
         zmax = max(5 * maxsig, 8*decaylen)
-        Nlayers = int((zmax - zmin) / minstep)
+        Nlayers = int((zmax - zmin) / dz)
         __z__ = np.linspace(zmin, zmax, Nlayers + 1)
 
         __d__ = np.diff(__z__)
@@ -172,11 +172,11 @@ class DampedSine: #Please put the class name same as the function name
         self.update_parameters()
         mkey=list(self.__mpar__.keys())[0]
         n, z, d, rho, beta = self.calcProfile(self.__d__[mkey], self.__rho__[mkey],
-                                                                                self.__beta__[mkey], self.__sig__[mkey], self.Minstep,
+                                                                                self.__beta__[mkey], self.__sig__[mkey], self.dz,
                                                                                 self.amp, self.decay_len, self.spacing, self.z0)
         if not self.__fit__:
-            self.output_params['%s_EDP' % self.__mkeys__[0]] = {'x': z, 'y': rho}
-            self.output_params['%s_ADP' % self.__mkeys__[0]] = {'x': z, 'y': beta}
+            self.output_params['%s_EDP' % self.__mkeys__[0]] = {'x': z, 'y': rho, 'names':['\u212B','el/\u212B<sup>3</sup>'],'plotType':'step'}
+            self.output_params['%s_ADP' % self.__mkeys__[0]] = {'x': z, 'y': beta, 'names':['\u212B','Beta'],'plotType':'step'}
         refq, r2 = self.py_parratt(tuple(x), lam, tuple(d), tuple(rho), tuple(beta))
         if self.rrf:
             rhos = (self.params['__%s_rho_000'%(mkey)].value, self.params['__%s_rho_%03d' % (mkey,n - 1)].value)

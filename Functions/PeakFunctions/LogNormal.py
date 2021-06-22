@@ -36,3 +36,8 @@ class LogNormal:
     def y(self):
         return self.norm*np.exp(-(np.log(self.x)-np.log(self.pos))**2/2.0/self.wid**2)/self.x/self.wid/2.5066+self.bkg
 
+if __name__=='__main__':
+    x=np.arange(0.001,1.0,0.01)
+    fun=LogNormal(x=x)
+    print(fun.y())
+

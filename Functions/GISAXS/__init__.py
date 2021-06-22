@@ -1,1 +1,1 @@
-__all__=['Rod_Sphere']
+__all__=['Rod_Lipid', 'Rod_Sphere']

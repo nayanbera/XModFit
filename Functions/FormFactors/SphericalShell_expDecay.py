@@ -131,6 +131,6 @@ class SphericalShell_expDecay: #Please put the class name same as the function n
         return form
 
 if __name__=='__main__':
-    x=np.arange(0.001,1.0,0.1)
+    x=np.arange(0.001,1.0,0.01)
     fun=SphericalShell_expDecay(x=x)
     print(fun.y())

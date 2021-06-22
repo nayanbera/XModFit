@@ -38,7 +38,7 @@ class SphereAtInterface: #Please put the class name same as the function name
     def __init__(self,x=0.1,lam=1.0,Rc=10,Rsig=0.0,rhoc=4.68,D=60.0, cov=100,Zo=20.0,decay=3.0,rho_up=0.333,
                  rho_down=0.38,zmin=-50,zmax=100,dz=1,roughness=3.0,rrf=True,mpar={},qoff=0):
         """
-        Calculates X-ray reflectivity from a system of nanoparticle at an interface between two media
+        Calculates X-ray reflectivity from a monolayer of nanoparticles at an interface
         x         	: array of wave-vector transfer along z-direction
         lam       	: wavelength of x-rays in invers units of x
         Rc        	: Radius of nanoparticles in inverse units of x
@@ -152,7 +152,7 @@ class SphereAtInterface: #Please put the class name same as the function name
         d=np.ones_like(z)*self.dz
         edp=self.decayNp(tuple(z),Rc=self.Rc,z0=self.Zo,xi=self.decay,cov=self.cov,rhos=rhos,rhoc=self.rhoc,sig=self.roughness,D=self.D)
         if not self.__fit__:
-            self.output_params['EDP']={'x':z,'y':edp}
+            self.output_params['EDP']={'x':z,'y':edp,'names':['z (\u212B)','\u03c1 (el/\u212B<sup>3</sup>)'],'plotType':'step'}
         beta=np.zeros_like(z)
         rho=np.array(edp,dtype='float')
         refq,r2=self.py_parratt(tuple(self.x+self.qoff),lam,tuple(d),tuple(rho),tuple(beta))
