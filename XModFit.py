@@ -5,6 +5,7 @@ from PyQt5.QtGui import QKeySequence, QFont, QDoubleValidator, QIntValidator
 from PyQt5.QtCore import Qt, QProcess
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
 import os
 import glob
 import sys
@@ -983,7 +984,10 @@ class XModFit(QWidget):
         splitter=QSplitter(Qt.Vertical)
         plotWidget=QWidget()
         clabel = QLabel('Parameter Correlations')
-        canvas=FigureCanvas(fig)
+        canvas=FigureCanvas(Figure(dpi=100,tight_layout=True))
+        corner.corner(self.fit.result.flatchain[names], labels=names, bins=50,
+                      truths=values, quantiles=[0.159, 0.5, 0.842], show_titles=True, title_fmt='.3f',
+                      use_math_text=True, title_kwargs={'fontsize': 12}, label_kwargs={'fontsize': 12},fig=canvas.figure)
         toolbar=NavigationToolbar(canvas, self)
         playout=QVBoxLayout()
         playout.addWidget(clabel)
@@ -991,8 +995,8 @@ class XModFit(QWidget):
         playout.addWidget(toolbar)
         plotWidget.setLayout(playout)
         splitter.addWidget(plotWidget)
-        fig.dpi=10
-        fig.tight_layout()
+        # fig.dpi=10
+        # fig.tight_layout()
         canvas.draw()
         statWidget=QWidget()
         slayout=QVBoxLayout()
