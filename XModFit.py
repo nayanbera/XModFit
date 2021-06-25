@@ -1,11 +1,13 @@
 from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QLineEdit, QVBoxLayout, QMessageBox, QCheckBox, \
     QComboBox, QListWidget, QDialog, QFileDialog, QAbstractItemView, QSplitter, QSizePolicy, QAbstractScrollArea, QHBoxLayout, QTextEdit, QShortcut,\
-    QProgressDialog, QDesktopWidget, QSlider, QTabWidget, QMenuBar, QAction, QTableWidgetSelectionRange, QProgressBar
+    QProgressDialog, QDesktopWidget, QSlider, QTabWidget, QMenuBar, QAction, QTableWidgetSelectionRange, QProgressBar, QMenu
 from PyQt5.QtGui import QKeySequence, QFont, QDoubleValidator, QIntValidator
 from PyQt5.QtCore import Qt, QProcess
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
+import webbrowser, shutil
+from docx import Document
 import os
 import glob
 import sys
@@ -236,11 +238,11 @@ class XModFit(QWidget):
         self.emcee_frac = self.emcee_burn/self.emcee_steps
         self.reuse_sampler = False
 
-        self.funcDock=Dock('Functions',size=(1,6),closable=False)
-        self.fitDock=Dock('Fit options',size=(1,2),closable=False)
-        self.dataDock=Dock('Data',size=(1,8),closable=False)
-        self.paramDock=Dock('Parameters',size=(2,8),closable=False)
-        self.plotDock=Dock('Data and Fit',size=(5,8),closable=False)
+        self.funcDock=Dock('Functions',size=(1,6),closable=False,hideTitle=False)
+        self.fitDock=Dock('Fit options',size=(1,2),closable=False,hideTitle=False)
+        self.dataDock=Dock('Data',size=(1,8),closable=False,hideTitle=False)
+        self.paramDock=Dock('Parameters',size=(2,8),closable=False,hideTitle=False)
+        self.plotDock=Dock('Data and Fit',size=(5,8),closable=False,hideTitle=False)
         self.mainDock.addDock(self.dataDock)
         self.mainDock.addDock(self.fitDock,'bottom')
         self.mainDock.addDock(self.paramDock,'right')
@@ -394,11 +396,63 @@ class XModFit(QWidget):
         col=0
         self.funcListWidget=QListWidget()
         self.funcListWidget.setSelectionMode(4)
+        self.funcListWidget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.funcListWidget.customContextMenuRequested.connect(self.funcListRightClicked)
         self.funcListWidget.itemSelectionChanged.connect(self.functionChanged)
         self.funcListWidget.itemDoubleClicked.connect(self.openFunction)
         self.funcLayoutWidget.addWidget(self.funcListWidget,row=row,col=col,colspan=2)
         
         self.funcDock.addWidget(self.funcLayoutWidget)
+
+    def funcListRightClicked(self,pos):
+        popMenu = QMenu()
+        showDet = QAction("Show Details", self)
+        addDet = QAction("Upload Details", self)
+        modDet = QAction("Create/Modify Details", self)
+        popMenu.addAction(showDet)
+        popMenu.addAction(addDet)
+        popMenu.addAction(modDet)
+        showDet.triggered.connect(self.showDetails)
+        addDet.triggered.connect(self.addDetails)
+        modDet.triggered.connect(self.modifyDetails)
+        popMenu.exec_(self.funcListWidget.mapToGlobal(pos))
+
+    def showDetails(self):
+        url = os.path.join(os.path.curdir, 'Function_Details', self.categoryListWidget.currentItem().text(),
+                            self.funcListWidget.currentItem().text(),'help.pdf')
+        if os.path.exists(url):
+            webbrowser.open_new_tab(url)
+        else:
+            QMessageBox.warning(self,'File Error','The help files regarding the function details do not exist.',QMessageBox.Ok)
+        # os.system('C:/Users/mrinalkb/Desktop/ESH738.pdf')
+
+    def addDetails(self):
+        path=os.path.join(os.path.curdir,'Function_Details',self.categoryListWidget.currentItem().text(),self.funcListWidget.currentItem().text())
+        if os.path.exists(path):
+            fname = QFileDialog.getOpenFileName(self,caption='Select help file',directory=self.curDir,filter="Help files (*.docx *.pdf)")[0]
+            tfname=os.path.join(path,'help'+os.path.splitext(fname)[1])
+            shutil.copy(fname,tfname)
+        else:
+            os.makedirs(path)
+
+    def modifyDetails(self):
+        category=self.categoryListWidget.currentItem().text()
+        function=self.funcListWidget.currentItem().text()
+        path = os.path.join(os.path.curdir, 'Function_Details', category,
+                            function,'help.docx')
+        if os.path.exists(path):
+            webbrowser.open_new_tab(path)
+        else:
+            if not os.path.exists(os.path.dirname(path)):
+                os.makedirs(os.path.dirname(path))
+            doc=Document()
+            doc.add_heading('Details of %s/%s'%(category,function),0)
+            module = 'Functions.%s.%s' % (category,function)
+            text=getattr(self.curr_funcClass[module], function).__init__.__doc__
+            doc.add_paragraph(text)
+            doc.save(path)
+            webbrowser.open_new_tab(path)
+
         
     def addCategory(self):
         self.errorAvailable = False
@@ -608,14 +662,14 @@ class XModFit(QWidget):
             xmax=np.max([np.max([np.max(self.data[key][k1]['x']) for k1 in self.data[key].keys()]) for key in self.sfnames])
             self.xminmaxLineEdit.setText('%0.3f:%0.3f'%(xmin,xmax))
             self.xminmaxChanged()
-            if len(self.data[self.sfnames[-1]].keys())>1:
-                text='{'
-                for key in self.data[self.sfnames[-1]].keys():
-                    text+='"'+key+'":np.linspace(%.3f,%.3f,%d),'%(xmin,xmax,100)
-                text=text[:-1]+'}'
-            else:
-                text='np.linspace(%.3f,%.3f,100)'%(xmin,xmax)
-            self.xLineEdit.setText(text)
+            # if len(self.data[self.sfnames[-1]].keys())>1:
+            #     text='{'
+            #     for key in self.data[self.sfnames[-1]].keys():
+            #         text+='"'+key+'":np.linspace(%.3f,%.3f,%d),'%(xmin,xmax,100)
+            #     text=text[:-1]+'}'
+            # else:
+            #     text='np.linspace(%.3f,%.3f,100)'%(xmin,xmax)
+            # self.xLineEdit.setText(text)
             self.fitButton.setEnabled(True)
         else:
             self.fitButton.setEnabled(False)
@@ -1000,7 +1054,7 @@ class XModFit(QWidget):
             if self.fit.emcee_params[key].vary:
                 l,p,r = np.percentile(self.fit.result.flatchain[key], [5, 50, 95])
                 mesg.append([key, p, l-p, r-p])
-        names=[name for name in self.fit.result.var_names if name!='__lnsigma']
+        names=[name for name in self.fit.result.var_names]# if name!='__lnsigma']
         values=[self.fit.result.params[name].value for name in names]
         # fig = corner.corner(self.fit.result.flatchain[names], labels=names, bins=50,
         #                     truths = values, quantiles = [0.159, 0.5, 0.842], show_titles = True, title_fmt='.3f',
@@ -1741,6 +1795,7 @@ class XModFit(QWidget):
             fh.write('#File saved on %s\n'%time.asctime())
             fh.write('#Category: %s\n'%self.categoryListWidget.currentItem().text())
             fh.write('#Function: %s\n'%self.funcListWidget.currentItem().text())
+            fh.write('#Xrange=%s\n'%self.xLineEdit.text())
             fh.write('#Fit Range=%s\n'%self.xminmaxLineEdit.text())
             fh.write('#Fit Method=%s\n'%self.fitMethodComboBox.currentText())
             fh.write('#Fit Scale=%s\n'%self.fitScaleComboBox.currentText())
@@ -1829,7 +1884,9 @@ class XModFit(QWidget):
                     sfline=None
                     mfline=None
                     for line in lines[3:]:
-                        if '#Fit Range=' in line:
+                        if '#Xrange=' in line:
+                            self.xLineEdit.setText(line.strip().split('=')[1])
+                        elif '#Fit Range=' in line:
                             self.xminmaxLineEdit.setText(line.strip().split('=')[1])
                             fline=lnum+1
                         elif '#Fit Method=' in line:
@@ -1927,6 +1984,7 @@ class XModFit(QWidget):
                         mkey=self.mfitParamTabWidget.tabText(i)
                         self.mfitParamTableWidget[mkey].cellChanged.connect(self.mfitParamChanged_new)
                     self.xminmaxChanged()
+                    self.xChanged()
                     self.errorAvailable=False
                     self.reuse_sampler=False
                     self.calcConfInterButton.setEnabled(False)
@@ -2143,7 +2201,8 @@ class XModFit(QWidget):
     def update_mfit_parameters_new(self):
         self.mfitParamTabWidget.currentChanged.disconnect()
         if '__mpar__' in self.fit.params.keys() and self.fit.params['__mpar__']!={}:
-            self.mfitParamCoupledCheckBox.setEnabled(True)
+            if len(self.fit.params['__mpar__'])>1:
+                self.mfitParamCoupledCheckBox.setEnabled(True)
             # self.mfitParamCoupledCheckBox.setCheckState(Qt.Unchecked)
             self.mfitParamTableWidget = {}
             self.mfitParamData = {}
@@ -2560,9 +2619,10 @@ class XModFit(QWidget):
 
         if len(self.funcListWidget.selectedItems())>0:
             try:
-                stime=time.time()
+                stime=time.perf_counter()
                 self.fit.evaluate()
-                exectime=time.time()-stime
+                ntime=time.perf_counter()
+                exectime=ntime-stime
             except:
                 QMessageBox.warning(self, 'Evaluation Error', traceback.format_exc(), QMessageBox.Ok)
                 self.fit.yfit = self.fit.func.x

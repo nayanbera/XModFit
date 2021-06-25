@@ -14,7 +14,7 @@ sys.path.append(os.path.abspath('./Fortran_rountines'))
 
 
 class Unified_Guinier: #Please put the class name same as the function name
-    def __init__(self,x=0,G=1.0,Rg=1.0,B=1.0,P=1.0,mpar={'type':['1']}):
+    def __init__(self,x=0,G=1.0,Rg=1.0,B=1.0,P=1.0,mpar={}):
         """
         Documentation
         x           : Independent variable in the form of a scalar or an array
@@ -32,6 +32,7 @@ class Unified_Guinier: #Please put the class name same as the function name
         self.B=B
         self.P=P
         self.__mpar__=mpar #If there is any multivalued parameter
+        self.__mkeys__=self.__mpar__.keys()
         self.choices={} #If there are choices available for any fixed parameters
         self.init_params()
         self.__fit__=False
@@ -62,7 +63,6 @@ class Unified_Guinier: #Please put the class name same as the function name
         """
         Define the function in terms of x to return some value
         """
-        self.output_params={}
         self.update_params()
         qs=self.x/erf(self.x*self.Rg/2.4495)**3
         I=self.G*np.exp(-self.x**2*self.Rg**2/3)+self.B*(1/qs)**self.P

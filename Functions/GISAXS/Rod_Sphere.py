@@ -90,12 +90,12 @@ class Rod_Sphere: #Please put the class name same as the function name
             q=np.sqrt(x**2+self.qpar**2)
             sphere=Sphere.Sphere(x=q,R=self.R,Rsig=self.Rsig,dist=self.dist,N=self.N)
             res=self.norm*sphere.y()*self.trans(qbeta,self.qc/2)*np.exp(-x**2*self.sig**2)+self.bkg
-        if self.Rsig>1e-3:
+        if not self.__fit__ and self.Rsig>1e-3:
             self.output_params['Distribution']=sphere.output_params['Distribution']
         return res
 
 
 if __name__=='__main__':
-    x=np.arange(0.001,1.0,0.1)
+    x=np.arange(0.001,1.0,0.01)
     fun=Rod_Sphere(x=x)
     print(fun.y())
