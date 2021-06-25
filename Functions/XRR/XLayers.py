@@ -38,18 +38,18 @@ def parratt_numba(q,lam,d,rho,beta):
     return ref,r
 
 
-class Parratt_New: #Please put the class name same as the function name
+class XLayers: #Please put the class name same as the function name
     def __init__(self, x=0.1, E=10.0, mpar={
         'Model': {'Layers': ['top', 'bottom'], 'd': [0.0, 1.0], 'rho': [0.0, 0.333], 'beta': [0.0, 0.0],
                    'sig': [0.0, 3.0]}},
-                 Minstep=0.5, rrf=True, fix_sig=False, qoff=0.0, yscale=1, bkg=0.0):
+                 dz=0.5, rrf=True, fix_sig=False, qoff=0.0, yscale=1, bkg=0.0):
         """
         Calculates X-ray reflectivity from a system of multiple layers using Parratt formalism
 
         x     	: array of wave-vector transfer along z-direction
         E     	: Energy of x-rays in invers units of x
         mpar  	: Dictionary of Phases where, Layers: Layer description, d: thickness of each layer, rho:Electron density of each layer, beta: Absorption coefficient of each layer, sig: roughness of interface separating each layer. The upper and lower thickness should be always  fixed. The roughness of the topmost layer should be always kept 0.
-        Minstep 	: The thickness (Angstrom) of each layer for applying Parratt formalism
+        dz  	: The thickness (Angstrom) of each layer for applying Parratt formalism
         rrf   	: True for Frensnel normalized refelctivity and False for just reflectivity
         qoff  	: q-offset to correct the zero q of the instrument
         yscale  : a scale factor for R or R/Rf
@@ -61,7 +61,7 @@ class Parratt_New: #Please put the class name same as the function name
             self.x = x
         self.E = E
         self.__mpar__ = mpar
-        self.Minstep = Minstep
+        self.dz = dz
         self.rrf = rrf
         self.fix_sig = fix_sig
         self.qoff = qoff
@@ -98,7 +98,7 @@ class Parratt_New: #Please put the class name same as the function name
                                         min=0, max=np.inf, expr=None, brute_step=0.05)
 
     @lru_cache(maxsize=2)
-    def calcProfile(self, d, rho, beta, sig, phase, minstep):
+    def calcProfile(self, d, rho, beta, sig, phase, dz):
         """
         Calculates the electron and absorption density profiles
         """
@@ -108,7 +108,7 @@ class Parratt_New: #Please put the class name same as the function name
         sig = np.array(sig)
         n = len(d)
         maxsig = max(np.abs(np.max(sig[1:])), 3)
-        Nlayers = int((np.sum(d[:-1]) + 10 * maxsig) / minstep)
+        Nlayers = int((np.sum(d[:-1]) + 10 * maxsig) / dz)
         halfstep = (np.sum(d[:-1]) + 10 * maxsig) / 2 / Nlayers
         __z__ = np.linspace(-5 * maxsig + halfstep, np.sum(d[:-1]) + 5 * maxsig - halfstep, Nlayers)
         __d__ = np.diff(__z__)
@@ -175,16 +175,16 @@ class Parratt_New: #Please put the class name same as the function name
         mkey=list(self.__mpar__.keys())[0]
         n, z, d, rho, beta = self.calcProfile(self.__d__[mkey], self.__rho__[mkey],
                                                                                 self.__beta__[mkey], self.__sig__[mkey],
-                                                                                mkey, self.Minstep)
+                                                                                mkey, self.dz)
         if not self.__fit__:
             tz,trho,tbeta=self.stepFun(z[0],z[-1],self.__d__[mkey],self.__rho__[mkey],self.__beta__[mkey])
-            self.output_params['%s_EDP' % self.__mkeys__[0]] = {'x': z, 'y': rho, 'names':['z, \u212B','\u03c1, el/\u212B<sup>3</sup>']}
-            self.output_params['%s_dEDP' % self.__mkeys__[0]] = {'x': z[:-1], 'y': np.diff(rho)/self.Minstep,
-                                                                'names': ['z, \u212B', 'd\u03c1/dz, el/\u212B<sup>4</sup>']}
-            self.output_params['%s_step_EDP' % self.__mkeys__[0]]={'x': tz, 'y': trho, 'names':['z, \u212B','\u03c1, el/\u212B<sup>3</sup>']}
-            self.output_params['%s_ADP' % self.__mkeys__[0]] = {'x': z, 'y': beta, 'names':['z, \u212B','Beta']}
-            self.output_params['%s_ADP' % self.__mkeys__[0]] = {'x': z[:-1], 'y': np.diff(beta)/self.Minstep, 'names': ['z, \u212B', 'dBeta/dz']}
-            self.output_params['%s_step_ADP' % self.__mkeys__[0]] = {'x': tz, 'y': tbeta, 'names':['z, \u212B','Beta']}
+            self.output_params['%s_EDP' % self.__mkeys__[0]] = {'x': z, 'y': rho, 'names':['z (\u212B)','\u03c1 (el/\u212B<sup>3</sup>)'],'plotType':'step'}
+            self.output_params['%s_dEDP' % self.__mkeys__[0]] = {'x': z[:-1], 'y': np.diff(rho)/self.dz,
+                                                                'names': ['z (\u212B)', 'd\u03c1/dz (el/\u212B<sup>4</sup>)'],'plotType':'step'}
+            self.output_params['%s_step_EDP' % self.__mkeys__[0]]={'x': tz, 'y': trho, 'names':['z (\u212B)','\u03c1 (el/\u212B<sup>3</sup>)'],'plotType':'step'}
+            self.output_params['%s_ADP' % self.__mkeys__[0]] = {'x': z, 'y': beta, 'names':['z (\u212B)','Beta'],'plotType':'step'}
+            self.output_params['%s_ADP' % self.__mkeys__[0]] = {'x': z[:-1], 'y': np.diff(beta)/self.dz, 'names': ['z (\u212B)', 'dBeta/dz'],'plotType':'step'}
+            self.output_params['%s_step_ADP' % self.__mkeys__[0]] = {'x': tz, 'y': tbeta, 'names':['z (\u212B)','Beta'], 'plotType':'step'}
         refq, r2 = self.py_parratt(tuple(x), lam, tuple(d), tuple(rho), tuple(beta))
         if self.rrf:
             rhos = (self.params['__%s_rho_000'%(mkey)].value, self.params['__%s_rho_%03d' % (mkey,n - 1)].value)
@@ -196,6 +196,6 @@ class Parratt_New: #Please put the class name same as the function name
 
 
 if __name__=='__main__':
-    x=np.linspace(0.001,1.0,100)
-    fun=Parratt_New(x=x)
+    x=np.linspace(0.001,1.0,200)
+    fun=XLayers(x=x)
     print(fun.y())
