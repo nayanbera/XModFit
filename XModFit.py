@@ -1,8 +1,9 @@
 from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QLineEdit, QVBoxLayout, QMessageBox, QCheckBox, \
     QComboBox, QListWidget, QDialog, QFileDialog, QAbstractItemView, QSplitter, QSizePolicy, QAbstractScrollArea, QHBoxLayout, QTextEdit, QShortcut,\
-    QProgressDialog, QDesktopWidget, QSlider, QTabWidget, QMenuBar, QAction, QTableWidgetSelectionRange, QProgressBar, QMenu
+    QProgressDialog, QDesktopWidget, QSlider, QTabWidget, QMenuBar, QAction, QTableWidgetSelectionRange, QProgressBar, QMenu, QTableWidgetItem
 from PyQt5.QtGui import QKeySequence, QFont, QDoubleValidator, QIntValidator
 from PyQt5.QtCore import Qt, QProcess
+from PyQt5 import uic
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -29,6 +30,10 @@ from FunctionEditor import FunctionEditor
 from MultiInputDialog import MultiInputDialog
 import traceback
 import pandas as pd
+from functools import partial
+import pylab as pl
+from scipy.stats import chi2
+import math
 
 class minMaxDialog(QDialog):
     def __init__(self, value, vary=0, minimum=None, maximum=None, expr=None, brute_step=None, parent=None, title=None):
@@ -261,7 +266,7 @@ class XModFit(QWidget):
         self.fileNames={}
         self.fchanged=True
         self.chisqr='None'
-        self.format='%.3e'
+        self.format='%.6e'
         self.gen_param_items=[]
         self.doubleValidator=QDoubleValidator()
         self.intValidator=QIntValidator()
@@ -349,10 +354,11 @@ class XModFit(QWidget):
 
 
     def aboutDialog(self):
-        QMessageBox.information(self,'About','Copyright (c) NSF\'s ChemMAtCARS, 2020.\n\n'
+        QMessageBox.information(self,'About','Copyright (c) 2021 NSF\'s ChemMAtCARS, University of Chicago.\n\n'
                                              'Developers:\n'
                                              'Mrinal K. Bera (mrinalkb@cars.uchicago.edu \n'
-                                             'Wei Bu (bu@cars.uchicago.edu)\n',QMessageBox.Ok)
+                                             'Wei Bu (bu@cars.uchicago.edu)'
+                                             ,QMessageBox.Ok)
         
     def create_funcDock(self):
         self.funcLayoutWidget=pg.LayoutWidget(self)
@@ -457,7 +463,7 @@ class XModFit(QWidget):
     def addCategory(self):
         self.errorAvailable = False
         self.reuse_sampler = False
-        self.calcConfInterButton.setEnabled(False)
+        self.calcConfInterButton.setDisabled(True)
         tdir=QFileDialog.getExistingDirectory(self,'Select a folder','./Functions/',QFileDialog.ShowDirsOnly)
         if tdir!='': 
             cdir=os.path.basename(os.path.normpath(tdir))
@@ -474,7 +480,7 @@ class XModFit(QWidget):
     def removeCategory(self):
         self.errorAvailable = False
         self.reuse_sampler = False
-        self.calcConfInterButton.setEnabled(False)
+        self.calcConfInterButton.setDisabled(True)
         self.funcListWidget.clear()
         if len(self.categoryListWidget.selectedItems())==1:
             ans=QMessageBox.question(self,'Delete warning','Are you sure you would like to delete the category?',
@@ -520,7 +526,7 @@ class XModFit(QWidget):
             QMessageBox.warning(self,'Category Error','Please select a Category first',QMessageBox.Ok)
         self.errorAvailable = False
         self.reuse_sampler = False
-        self.calcConfInterButton.setEnabled(False)
+        self.calcConfInterButton.setDisabled(True)
 
         
         
@@ -570,7 +576,7 @@ class XModFit(QWidget):
             QMessageBox.warning(self,'Warning','Please select one function atleast to remove',QMessageBox.Ok)
         self.errorAvailable = False
         self.reuse_sampler = False
-        self.calcConfInterButton.setEnabled(False)
+        self.calcConfInterButton.setDisabled(True)
         
     def create_dataDock(self):
         self.dataLayoutWidget=pg.LayoutWidget(self)
@@ -637,11 +643,18 @@ class XModFit(QWidget):
         self.fitLayoutWidget.addWidget(self.fitButton, col=1)
 
         self.fitLayoutWidget.nextRow()
+        confIntervalMethodLabel=QLabel('Confidence Interval Method')
+        self.confIntervalMethodComboBox=QComboBox()
+        self.confIntervalMethodComboBox.addItems(['ChiSqrDist', 'MCMC'])
+        self.fitLayoutWidget.addWidget(confIntervalMethodLabel)
+        self.fitLayoutWidget.addWidget(self.confIntervalMethodComboBox,col=1)
+
+        self.fitLayoutWidget.nextRow()
         self.showConfIntervalButton = QPushButton('Show Param Error')
         self.showConfIntervalButton.setDisabled(True)
         self.showConfIntervalButton.clicked.connect(self.fitErrorDialog)
         self.calcConfInterButton = QPushButton('Calculate Param Error')
-        self.calcConfInterButton.clicked.connect(self.confInterval_emcee)
+        self.calcConfInterButton.clicked.connect(self.calcConfInterval)
         self.calcConfInterButton.setDisabled(True)
         self.fitLayoutWidget.addWidget(self.showConfIntervalButton)
         self.fitLayoutWidget.addWidget(self.calcConfInterButton, col=1)
@@ -677,7 +690,7 @@ class XModFit(QWidget):
         self.xChanged()
         self.errorAvailable = False
         self.reuse_sampler = False
-        self.calcConfInterButton.setEnabled(False)
+        self.calcConfInterButton.setDisabled(True)
             
     def openDataDialog(self,item):
         fnum,fname=item.text().split('<>')
@@ -900,7 +913,7 @@ class XModFit(QWidget):
                         # self.xChanged()
                     else:
                         self.undoFit()
-                        self.calcConfInterButton.setEnabled(False)
+                        self.calcConfInterButton.setDisabled(True)
                     self.reuse_sampler=False
                 else:
                     self.errorAvailable = True
@@ -924,6 +937,268 @@ class XModFit(QWidget):
             self.fit.functionCalled.disconnect()
         except:
             pass
+
+
+    def calcConfInterval(self):
+        if self.confIntervalMethodComboBox.currentText()=='ChiSqrDist':
+            self.confInterval_ChiSqrDist()
+        else:
+            self.confInterval_emcee()
+
+
+    def confInterval_ChiSqrDist(self):
+        self.confIntervalWidget=QWidget()
+        uic.loadUi('./UI_Forms/ConfInterval_ChiSqrDist.ui',self.confIntervalWidget)
+        self.chidata={}
+        fitTableWidget = self.confIntervalWidget.fitParamTableWidget
+        self.calcErrPushButtons={}
+        self.errProgressBars={}
+        self.plotErrPushButtons={}
+        for fpar in self.fit.result.params.keys():
+            if self.fit.fit_params[fpar].vary:
+                row = fitTableWidget.rowCount()
+                fitTableWidget.insertRow(row)
+                fitTableWidget.setCellWidget(row,0,QLabel(fpar))
+                fitTableWidget.setItem(row,1,QTableWidgetItem(self.format%self.fit.result.params[fpar].value))
+                if self.fit.result.params[fpar].stderr is not None:
+                    fitTableWidget.setItem(row,2,QTableWidgetItem(self.format % (self.fit.result.params[fpar].value - 5*self.fit.result.params[fpar].stderr)))
+                    fitTableWidget.setItem(row,3,QTableWidgetItem(self.format % (self.fit.result.params[fpar].value + 5*self.fit.result.params[fpar].stderr)))
+                else:
+                    fitTableWidget.setItem(row, 2, QTableWidgetItem(self.format % (0.9*self.fit.result.params[fpar].value)))
+                    fitTableWidget.setItem(row, 3, QTableWidgetItem(self.format % (1.1*self.fit.result.params[fpar].value)))
+                fitTableWidget.setItem(row,4, QTableWidgetItem('20'))
+                self.calcErrPushButtons[fpar]=QPushButton('Calculate')
+                fitTableWidget.setCellWidget(row, 5, self.calcErrPushButtons[fpar])
+                self.calcErrPushButtons[fpar].clicked.connect(partial(self.calcErrPushButtonClicked,row,fpar))
+                self.errProgressBars[fpar]=QProgressBar()
+                fitTableWidget.setCellWidget(row, 6, self.errProgressBars[fpar])
+                self.confIntervalWidget.fitParamTableWidget.setItem(row, 7, QTableWidgetItem(''))
+                self.confIntervalWidget.fitParamTableWidget.setItem(row, 8, QTableWidgetItem(''))
+                self.plotErrPushButtons[fpar]=QPushButton('Plot')
+                fitTableWidget.setCellWidget(row,9, self.plotErrPushButtons[fpar])
+                self.plotErrPushButtons[fpar].clicked.connect(partial(self.plotErrPushButtonClicked,row,fpar))
+        fitTableWidget.resizeColumnsToContents()
+        self.confIntervalWidget.plotAllPushButton.clicked.connect(self.plotAllErrPushButtonClicked)
+        self.confIntervalWidget.calcAllPushButton.clicked.connect(self.calcAllErr)
+        self.confIntervalWidget.saveAllPushButton.clicked.connect(self.saveAllErr)
+        self.confIntervalWidget.confIntervalSpinBox.valueChanged.connect(self.setTargetChiSqr)
+        self.confIntervalWidget.saveErrPushButton.clicked.connect(self.saveParIntervalErr)
+        self.minimafitparameters = copy.copy(self.fit.result.params)
+        self.confIntervalWidget.showMaximized()
+        self.left_limit={}
+        self.right_limit={}
+        self.min_value={}
+        self.calcAll=False
+
+    def setTargetChiSqr(self):
+        self.confInterval = self.confIntervalWidget.confIntervalSpinBox.value()
+        self.minchisqr = self.fit.result.redchi
+        self.confIntervalWidget.minChiSqrLineEdit.setText(self.format % self.minchisqr)
+        self.targetchisqr = self.fit.result.redchi * chi2.isf((1.0 - self.confInterval * 0.01),
+                                                              self.fit.result.nfree) / (self.fit.result.nfree)
+        self.confIntervalWidget.targetChiSqrLineEdit.setText(self.format % self.targetchisqr)
+
+
+    def calcAllErr(self):
+        self.calcAll=True
+        for row in range(self.confIntervalWidget.fitParamTableWidget.rowCount()):
+            fpar=self.confIntervalWidget.fitParamTableWidget.cellWidget(row,0).text()
+            self.calcErrPushButtonClicked(row,fpar)
+        self.plotAllErrPushButtonClicked()
+        self.errInfoTable = []
+        for key in self.chidata.keys():
+            if self.left_limit[key] is not None and self.right_limit[key] is not None:
+                self.errInfoTable.append([key, self.min_value[key], self.left_limit[key] - self.min_value[key],
+                         self.right_limit[key] - self.min_value[key]])
+            elif self.left_limit[key] is None and self.right_limit[key] is not None:
+                self.errInfoTable.append([key, self.min_value[key], None,
+                                          self.right_limit[key] - self.min_value[key]])
+            elif self.left_limit[key] is not None and self.right_limit is None:
+                self.errInfoTable.append([key, self.min_value[key], self.left_limit[key] - self.min_value[key],
+                                          None])
+            else:
+                self.errInfoTable.append([key, self.min_value[key], None, None])
+
+
+        self.confIntervalWidget.errInfoTextEdit.clear()
+        self.confIntervalWidget.errInfoTextEdit.setFont(QFont("Courier", 10))
+        self.confIntervalWidget.errInfoTextEdit.append(tabulate(self.errInfoTable,
+                                                                headers=["Parameter","Parameter-Value","Left-Error","Right-Error"],
+                                                                stralign='left',numalign='left',tablefmt='simple'))
+
+
+    def calcErrPushButtonClicked(self,row,fpar):
+        for key in self.minimafitparameters:
+            self.fit.fit_params[key].value = self.minimafitparameters[key].value
+        vmax = float(self.confIntervalWidget.fitParamTableWidget.item(row, 3).text())
+        vmin = float(self.confIntervalWidget.fitParamTableWidget.item(row, 2).text())
+        Nval = int(self.confIntervalWidget.fitParamTableWidget.item(row, 4).text())
+        self.fit.fit_params[fpar].vary=False
+        redchi_r=[]
+        self.errProgressBars[fpar].setMinimum(0)
+        self.errProgressBars[fpar].setMaximum(Nval)
+        #Getting the chi-sqr value at the minima position keeping the value of fpar fixed at the minima position
+        fit_report, mesg =self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale, fit_method=self.fit_method,
+                             maxiter=100000)
+        self.setTargetChiSqr()
+        redchi_r.append([self.fit.fit_params[fpar].value, self.fit.result.redchi])
+        self.errProgressBars[fpar].setValue(1)
+        #Fitting the right hand side of the minima starting from the first point after minima
+        value=self.fit.result.params[fpar].value
+        self.min_value[fpar]=value
+        pvalues=np.linspace(value+(vmax-value)*2/Nval, vmax, int(Nval/2))
+        i=1
+        for parvalue in pvalues:
+            for key in self.minimafitparameters: # Putting back the minima parameters
+                self.fit.fit_params[key].value = self.minimafitparameters[key].value
+            self.fit.fit_params[fpar].value=parvalue
+            fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
+                                                    fit_method=self.fit_method,
+                                                    maxiter=100000)
+
+            redchi_r.append([parvalue,self.fit.result.redchi])
+            i+=1
+            self.errProgressBars[fpar].setValue(i)
+
+
+        step=(value-vmin)*2/Nval
+        redchi_l=[redchi_r[0]]
+
+        #Fitting the left hand of the minima starting from the minima point
+        pvalues=np.linspace(value-step, vmin, int(Nval / 2))
+        for parvalue in pvalues:
+            for key in self.minimafitparameters: # Putting back the minima parameters
+                self.fit.fit_params[key].value = self.minimafitparameters[key].value
+            self.fit.fit_params[fpar].value = parvalue
+            fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
+                                                    fit_method=self.fit_method,
+                                                    maxiter=100000)
+            redchi_l.append([parvalue, self.fit.result.redchi])
+            i+=1
+            self.errProgressBars[fpar].setValue(i)
+
+        chidata=np.array(redchi_r+redchi_l[1:])
+        self.chidata[fpar]=chidata[chidata[:,0].argsort()]
+        for key in self.minimafitparameters:
+            self.fit.fit_params[key].value = self.minimafitparameters[key].value
+        self.fit.fit_params[fpar].vary = True
+        fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
+                                                fit_method=self.fit_method,
+                                                maxiter=100000)
+
+
+        rvalues = np.array(redchi_r)
+        if self.targetchisqr < np.max(rvalues[:, 1]):
+            self.right_limit[fpar] = np.interp([self.targetchisqr], rvalues[:, 1], rvalues[:, 0])[0]
+            self.confIntervalWidget.fitParamTableWidget.item(row, 8).setText(self.format % (self.right_limit[fpar]))
+        else:
+            self.right_limit[fpar] = None
+            self.confIntervalWidget.fitParamTableWidget.item(row, 8).setText('None')
+
+        lvalues = np.array(redchi_l)
+        if self.targetchisqr < np.max(lvalues[:, 1]):
+            self.left_limit[fpar] = np.interp([self.targetchisqr], lvalues[:, 1], lvalues[:, 0])[0]
+            self.confIntervalWidget.fitParamTableWidget.item(row, 7).setText(self.format % (self.left_limit[fpar]))
+        else:
+            self.left_limit[fpar] = None
+            self.confIntervalWidget.fitParamTableWidget.item(row, 7).setText('None')
+
+
+        # Plotting the data
+        if not self.calcAll:
+            self.plotErrPushButtonClicked(row, fpar)
+
+
+    def plotErrPushButtonClicked(self,row,fpar):
+        if fpar in self.chidata.keys():
+            pl.ion()
+            pl.figure()
+            pl.plot(self.chidata[fpar][:, 0], self.chidata[fpar][:, 1], 'r.')
+            pl.axhline(self.minchisqr,color='k',lw=1,ls='--')
+            pl.axhline(self.targetchisqr,color='k',lw=1,ls='-')
+            pl.axvline(self.min_value[fpar],color='b',lw=2,ls='-')
+            pl.text(self.min_value[fpar],1.01*self.minchisqr,self.format%self.min_value[fpar],rotation='vertical')
+            if self.right_limit[fpar] is not None:
+                pl.axvline(self.right_limit[fpar],color='b',lw=1,ls='--')
+                pl.text(self.right_limit[fpar], 1.01*self.targetchisqr, self.format%self.right_limit[fpar],rotation='vertical')
+            if self.left_limit[fpar] is not None:
+                pl.axvline(self.left_limit[fpar],color='b',lw=1,ls='--')
+                pl.text(self.left_limit[fpar], 1.01*self.targetchisqr, self.format% self.left_limit[fpar],rotation='vertical')
+            pl.xlabel(fpar)
+            pl.ylabel('\u03c7$^2$')
+        else:
+            QMessageBox.warning(self, 'Data error', 'No data available for plotting. Calculate first', QMessageBox.Ok)
+        # if fpar in self.chidata.keys():
+        #     x=self.chidata[fpar][:,0]
+        #     y=self.chidata[fpar][:,1]
+        #     data = {'data': pd.DataFrame(list(zip(x, y)), columns=[fpar, 'chi_sqr']),
+        #             'meta': {'col_names': [fpar, 'chi_sqr']}}
+        #     data_dlg = Data_Dialog(data=data, parent=self, expressions={},
+        #                            plotIndex=None, colors=None)
+        #     data_dlg.setModal(True)
+        #     data_dlg.closePushButton.setText('Close')
+        #     data_dlg.tabWidget.setCurrentIndex(2)
+        #     data_dlg.dataFileLineEdit.setText('None')
+        #     data_dlg.exec_()
+        # else:
+        #     QMessageBox.warning(self,'Data error','No data available for plotting. Calculate first',QMessageBox.Ok)
+
+
+    def plotAllErrPushButtonClicked(self):
+        pkey=list(self.chidata.keys())
+        Nplots=len(pkey)
+        if Nplots>0:
+            pl.ion()
+            rows=math.ceil(np.sqrt(Nplots))
+            fig,ax=pl.subplots(rows,rows,sharey='row')
+            i=1
+            if rows<2:
+                ax.plot(self.chidata[pkey[i - 1]][:, 0], self.chidata[pkey[i - 1]][:, 1], '.')
+                ax.set_xlabel(pkey[i - 1])
+                ax.set_ylabel('chi-sqr')
+            for row in range(rows):
+                for col in range(rows):
+                    if i<=Nplots:
+                        ax[row,col].plot(self.chidata[pkey[i-1]][:,0],self.chidata[pkey[i-1]][:,1],'r.')
+                        ax[row,col].axhline(self.minchisqr, color='k', lw=1, ls='--')
+                        ax[row,col].axhline(self.targetchisqr, color='k', lw=1, ls='-')
+                        ax[row,col].axvline(self.min_value[pkey[i-1]], color='b', lw=2, ls='-')
+                        ax[row,col].text(self.min_value[pkey[i-1]], 1.01 * self.minchisqr, self.format % self.min_value[pkey[i-1]],rotation='vertical')
+                        if self.right_limit[pkey[i-1]] is not None:
+                            ax[row,col].axvline(self.right_limit[pkey[i-1]], color='b', lw=1, ls='--')
+                            ax[row,col].text(self.right_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.right_limit[pkey[i-1]],rotation='vertical')
+                        if self.left_limit[pkey[i-1]] is not None:
+                            ax[row,col].axvline(self.left_limit[pkey[i-1]], color='b', lw=1, ls='--')
+                            ax[row, col].text(self.left_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.left_limit[pkey[i-1]],rotation='vertical')
+                        ax[row,col].set_xlabel(pkey[i-1])
+                        ax[row,col].set_ylabel('chi-sqr')
+                    else:
+                        ax[row,col].axis('off')
+                    i+=1
+            pl.tight_layout()
+
+    def saveAllErr(self):
+        fname=QFileDialog.getSaveFileName(self,'Provide prefix of the filename',directory=self.curDir,filter='Chi-Sqr files (*.chisqr)')[0]
+        if fname!='':
+            for key in self.chidata.keys():
+                filename=os.path.splitext(fname)[0]+'_'+key+'.chisqr'
+                header='Saved on %s\n'%(time.asctime())
+                header="col_names=['%s','chi-sqr']"%key
+                header+='%s\tchi-sqr'%key
+                pl.savetxt(filename,self.chidata[key],header=header)
+
+    def saveParIntervalErr(self):
+        fname = QFileDialog.getSaveFileName(caption='Save Parameter Errors as', filter='Parameter Error files (*.perr)',
+                                            directory=self.curDir)[0]
+        if fname!='':
+            fh=open(fname,'w')
+            fh.write('# File saved on %s\n'%time.asctime())
+            fh.write('# Error calculated using Chi-Sqr-Distribution Method')
+            fh.writelines(tabulate(self.errInfoTable, headers=["Parameter","Parameter-Value","Left-Error","Right-Error"],
+                                   stralign='left',numalign='left',tablefmt='simple'))
+            fh.close()
+
+
 
 
         
@@ -1048,10 +1323,10 @@ class XModFit(QWidget):
         # QApplication.processEvents()
 
     def fitErrorDialog(self):
-        mesg=[['Parameters', 'Value(50%)', 'Left-error(5%)', 'Right-error(95%)']]
+        mesg=[['Parameters', 'Value(50%)', 'Left-error(32%)', 'Right-error(68%)']]
         for key in self.fit.emcee_params.keys():
             if self.fit.emcee_params[key].vary:
-                l,p,r = np.percentile(self.fit.result.flatchain[key], [5, 50, 95])
+                l,p,r = np.percentile(self.fit.result.flatchain[key], [32, 50, 68])
                 mesg.append([key, p, l-p, r-p])
         names=[name for name in self.fit.result.var_names]# if name!='__lnsigma']
         values=[self.fit.result.params[name].value for name in names]
@@ -1069,7 +1344,7 @@ class XModFit(QWidget):
         plotWidget=QWidget()
         clabel = QLabel('Parameter Correlations')
         ndim=len(names)
-        canvas=FigureCanvas(Figure(figsize=(ndim*3,ndim*3),tight_layout=False))
+        canvas=FigureCanvas(Figure(figsize=(ndim*3,ndim*3)))#,subplotpars={'wspace':0,'hspace':0}))
         toolbar=NavigationToolbar(canvas, self)
         playout=QVBoxLayout()
         playout.addWidget(clabel)
@@ -1077,8 +1352,8 @@ class XModFit(QWidget):
         playout.addWidget(toolbar)
         plotWidget.setLayout(playout)
         splitter.addWidget(plotWidget)
-        corner.corner(self.fit.result.flatchain[names], labels=names, bins=50,
-                      truths=values, quantiles=[0.05, 0.5, 0.95], show_titles=True, title_fmt='.3f',
+        corner.corner(self.fit.result.flatchain[names], labels=names, bins=50,levels=(0.68,),
+                      truths=values, quantiles=[0.32, 0.5, 0.68], show_titles=True, title_fmt='.6f',
                       use_math_text=True, title_kwargs={'fontsize': 3*12/ndim}, label_kwargs={'fontsize': 3*12/ndim},fig=canvas.figure)
         for ax in canvas.figure.get_axes():
             ax.set_xlabel('')
@@ -1120,6 +1395,8 @@ class XModFit(QWidget):
         if os.path.splitext(fname)=='':
             fname=fname+'.perr'
         fh=open(fname,'w')
+        fh.write('# File save on %s\n'%time.asctime())
+        fh.write('# Error calculated using MCMC Method')
         fh.writelines(text)
         fh.close()
 
@@ -1203,7 +1480,7 @@ class XModFit(QWidget):
         self.dataListWidget.setCurrentRow(self.fileNumber-1)
         self.errorAvailable = False
         self.reuse_sampler = False
-        self.calcConfInterButton.setEnabled(False)
+        self.calcConfInterButton.setDisabled(True)
                 
         
     def removeData(self):
@@ -1229,7 +1506,7 @@ class XModFit(QWidget):
         self.dataListWidget.itemSelectionChanged.connect(self.dataFileSelectionChanged)
         self.errorAvailable = False
         self.reuse_sampler = False
-        self.calcConfInterButton.setEnabled(False)
+        self.calcConfInterButton.setDisabled(True)
 
             
         
@@ -1514,7 +1791,7 @@ class XModFit(QWidget):
                 self.update_plot()
             self.errorAvailable = False
             self.reuse_sampler = False
-            self.calcConfInterButton.setEnabled(False)
+            self.calcConfInterButton.setDisabled(True)
 
 
     def mfitParamCoupledCheckBoxChanged(self):
@@ -1546,7 +1823,7 @@ class XModFit(QWidget):
                 self.mfitParamTabWidget.setCurrentIndex(cur_index)
                 self.errorAvailable = False
                 self.reuse_sampler = False
-                self.calcConfInterButton.setEnabled(False)
+                self.calcConfInterButton.setDisabled(True)
 
     def add_mpar(self):
         if self.mfitParamCoupledCheckBox.isChecked() and self.mfitParamTabWidget.count()>1:
@@ -1557,7 +1834,7 @@ class XModFit(QWidget):
         self.remove_mpar_button.setEnabled(True)
         self.errorAvailable = False
         self.reuse_sampler = False
-        self.calcConfInterButton.setEnabled(False)
+        self.calcConfInterButton.setDisabled(True)
 
     def remove_mpar(self):
         if self.mfitParamCoupledCheckBox.isChecked() and self.mfitParamTabWidget.count()>1:
@@ -1567,7 +1844,7 @@ class XModFit(QWidget):
         self.update_plot()
         self.errorAvailable = False
         self.reuse_sampler = False
-        self.calcConfInterButton.setEnabled(False)
+        self.calcConfInterButton.setDisabled(True)
 
     def add_coupled_mpar(self):
         cur_index=self.mfitParamTabWidget.currentIndex()
@@ -1583,7 +1860,7 @@ class XModFit(QWidget):
         self.mfitParamTabWidget.setCurrentIndex(cur_index)
         self.errorAvailable = False
         self.reuse_sampler = False
-        self.calcConfInterButton.setEnabled(False)
+        self.calcConfInterButton.setDisabled(True)
 
     def remove_coupled_mpar(self):
         cur_index=self.mfitParamTabWidget.currentIndex()
@@ -1600,7 +1877,7 @@ class XModFit(QWidget):
         self.mfitParamTabWidget.setCurrentIndex(cur_index)
         self.errorAvailable = False
         self.reuse_sampler = False
-        self.calcConfInterButton.setEnabled(False)
+        self.calcConfInterButton.setDisabled(True)
         
     def add_uncoupled_mpar(self):
         mkey=self.mfitParamTabWidget.tabText(self.mfitParamTabWidget.currentIndex())
@@ -1661,7 +1938,7 @@ class XModFit(QWidget):
             self.update_plot()
             self.errorAvailable = False
             self.reuse_sampler = False
-            self.calcConfInterButton.setEnabled(False)
+            self.calcConfInterButton.setDisabled(True)
             # self.remove_mpar_button.setEnabled(True)
         else:
             QMessageBox.warning(self,'Warning','Please select a row at which you would like to add a set of parameters',QMessageBox.Ok)
@@ -1721,7 +1998,7 @@ class XModFit(QWidget):
             self.remove_mpar_button.setDisabled(True)
         self.errorAvailable = False
         self.reuse_sampler = False
-        self.calcConfInterButton.setEnabled(False)
+        self.calcConfInterButton.setDisabled(True)
             
         
     def saveGenParameters(self,bfname=None):
@@ -1862,6 +2139,7 @@ class XModFit(QWidget):
         else:
             fname=fname
         if fname!='':
+            self.curDir = os.path.dirname(fname)
             try:
                 self.funcListWidget.itemSelectionChanged.disconnect()
             except:
@@ -1986,7 +2264,7 @@ class XModFit(QWidget):
                     self.xChanged()
                     self.errorAvailable=False
                     self.reuse_sampler=False
-                    self.calcConfInterButton.setEnabled(False)
+                    self.calcConfInterButton.setDisabled(True)
                     # self.update_plot()
                 else:
                     QMessageBox.warning(self, 'File error',
@@ -2015,8 +2293,8 @@ class XModFit(QWidget):
         fitResults = QLabel('Fit Results')
         self.fitResultsLayoutWidget.addWidget(fitResults, colspan=1)
         self.fitResultsLayoutWidget.nextRow()
-        self.fitResultsListWidget = QListWidget()
-        self.fitResultsLayoutWidget.addWidget(self.fitResultsListWidget, colspan=1)
+        self.fitResultTextEdit = QTextEdit()
+        self.fitResultsLayoutWidget.addWidget(self.fitResultTextEdit, colspan=1)
         self.plotSplitter.addWidget(self.fitResultsLayoutWidget)
 
         self.plotDock.addWidget(self.plotSplitter)
@@ -2095,7 +2373,7 @@ class XModFit(QWidget):
                 self.saveSimulatedButton.setEnabled(True)
                 self.errorAvailable = False
                 self.reuse_sampler = False
-                self.calcConfInterButton.setEnabled(False)
+                self.calcConfInterButton.setDisabled(True)
             except:
                 QMessageBox.warning(self,'Function Error','Some syntax error in the function still exists.\n'+traceback.format_exc(),QMessageBox.Ok)
         else:
@@ -2642,13 +2920,11 @@ class XModFit(QWidget):
                 self.genParamListWidget.itemSelectionChanged.disconnect()
             except:
                 pass
-            self.fitResultsListWidget.clear()
+            self.fitResultTextEdit.clear()
             try:
-                self.fitResultsListWidget.addItem('Chi-Sqr : %f' % self.fit.result.chisqr)
-                self.fitResultsListWidget.addItem('Reduced Chi-Sqr : %f' % self.fit.result.redchi)
-                self.fitResultsListWidget.addItem('Fit Message : %s' % self.fit.result.lmdif_message)
+                self.fitResultTextEdit.append(self.fit_report)
             except:
-                self.fitResultsListWidget.clear()
+                self.fitResultTextEdit.clear()
             self.genParamListWidget.clear()
             self.fit.params['output_params']['scaler_parameters']['Exec-time (sec)'] = exectime
             self.fit.params['output_params']['scaler_parameters']['Chi-Sqr'] = self.chisqr

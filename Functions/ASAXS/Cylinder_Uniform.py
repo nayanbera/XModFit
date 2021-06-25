@@ -193,7 +193,7 @@ class Cylinder_Uniform: #Please put the class name same as the function name
 
     @lru_cache(maxsize=10)
     def cylinder_dict(self, q, R, H, HvvgtR, Rsig, rho, eirho, adensity, dist='Gaussian', Np=10, Nalf=1000):
-        form, eiform, aform, cform = self.cylinder(q, R, H, Rsig, rho, eirho, adensity, dist=dist, Np=Np,
+        form, eiform, aform, cform = self.cylinder(q, R, H, HvvgtR, Rsig, rho, eirho, adensity, dist=dist, Np=Np,
                                                     Nalf=Nalf)
         sqf = {'Total': form, 'SAXS-term': eiform, 'Resonant-term': aform, 'Cross-term': cform}
         return sqf
