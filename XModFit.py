@@ -909,7 +909,7 @@ class XModFit(QWidget):
                                                  self.fit.yerr[self.fit.imin:self.fit.imax + 1],
                                                  self.fit.yfit)).T
                             np.savetxt(ofname + '_fit.txt', fitdata, header=header, comments='#')
-                            self.calcConfInterButton.setEnabled(True)
+                        self.calcConfInterButton.setEnabled(True)
                         # self.xChanged()
                     else:
                         self.undoFit()
@@ -960,7 +960,7 @@ class XModFit(QWidget):
                 fitTableWidget.insertRow(row)
                 fitTableWidget.setCellWidget(row,0,QLabel(fpar))
                 fitTableWidget.setItem(row,1,QTableWidgetItem(self.format%self.fit.result.params[fpar].value))
-                if self.fit.result.params[fpar].stderr is not None:
+                if self.fit.result.params[fpar].stderr is not None and self.fit.result.params[fpar].stderr!=0.0:
                     fitTableWidget.setItem(row,2,QTableWidgetItem(self.format % (self.fit.result.params[fpar].value - 5*self.fit.result.params[fpar].stderr)))
                     fitTableWidget.setItem(row,3,QTableWidgetItem(self.format % (self.fit.result.params[fpar].value + 5*self.fit.result.params[fpar].stderr)))
                 else:
@@ -1039,7 +1039,7 @@ class XModFit(QWidget):
         self.errProgressBars[fpar].setMaximum(Nval)
         #Getting the chi-sqr value at the minima position keeping the value of fpar fixed at the minima position
         fit_report, mesg =self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale, fit_method=self.fit_method,
-                             maxiter=100000)
+                             maxiter=int(self.fitIterationLineEdit.text()))
         self.setTargetChiSqr()
         redchi_r.append([self.fit.fit_params[fpar].value, self.fit.result.redchi])
         self.errProgressBars[fpar].setValue(1)
@@ -1054,9 +1054,9 @@ class XModFit(QWidget):
             self.fit.fit_params[fpar].value=parvalue
             fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
                                                     fit_method=self.fit_method,
-                                                    maxiter=100000)
-
-            redchi_r.append([parvalue,self.fit.result.redchi])
+                                                    maxiter=int(self.fitIterationLineEdit.text()))
+            if self.fit.result.success:
+                redchi_r.append([parvalue,self.fit.result.redchi])
             i+=1
             self.errProgressBars[fpar].setValue(i)
 
@@ -1072,8 +1072,9 @@ class XModFit(QWidget):
             self.fit.fit_params[fpar].value = parvalue
             fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
                                                     fit_method=self.fit_method,
-                                                    maxiter=100000)
-            redchi_l.append([parvalue, self.fit.result.redchi])
+                                                    maxiter=int(self.fitIterationLineEdit.text()))
+            if self.fit.result.success:
+                redchi_l.append([parvalue, self.fit.result.redchi])
             i+=1
             self.errProgressBars[fpar].setValue(i)
 
@@ -1084,7 +1085,7 @@ class XModFit(QWidget):
         self.fit.fit_params[fpar].vary = True
         fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
                                                 fit_method=self.fit_method,
-                                                maxiter=100000)
+                                                maxiter=int(self.fitIterationLineEdit.text()))
 
 
         rvalues = np.array(redchi_r)
