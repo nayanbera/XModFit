@@ -1059,6 +1059,7 @@ class XModFit(QWidget):
                 redchi_r.append([parvalue,self.fit.result.redchi])
             i+=1
             self.errProgressBars[fpar].setValue(i)
+            QApplication.processEvents()
 
 
         step=(value-vmin)*2/Nval
@@ -1077,6 +1078,7 @@ class XModFit(QWidget):
                 redchi_l.append([parvalue, self.fit.result.redchi])
             i+=1
             self.errProgressBars[fpar].setValue(i)
+            QApplication.processEvents()
 
         chidata=np.array(redchi_r+redchi_l[1:])
         self.chidata[fpar]=chidata[chidata[:,0].argsort()]
@@ -1108,6 +1110,8 @@ class XModFit(QWidget):
         # Plotting the data
         if not self.calcAll:
             self.plotErrPushButtonClicked(row, fpar)
+
+
 
 
     def plotErrPushButtonClicked(self,row,fpar):
