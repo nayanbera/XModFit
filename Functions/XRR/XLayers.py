@@ -42,7 +42,7 @@ class XLayers: #Please put the class name same as the function name
     def __init__(self, x=0.1, E=10.0, mpar={
         'Model': {'Layers': ['top', 'bottom'], 'd': [0.0, 1.0], 'rho': [0.0, 0.333], 'beta': [0.0, 0.0],
                    'sig': [0.0, 3.0]}},
-                 dz=0.5, rrf=True, fix_sig=False, qoff=0.0, yscale=1, bkg=0.0):
+                 dz=0.5, rrf=True, fix_sig=True, qoff=0.0, yscale=1, bkg=0.0):
         """
         Calculates X-ray reflectivity from a system of multiple layers using Parratt formalism
 
