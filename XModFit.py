@@ -343,7 +343,7 @@ class XModFit(QWidget):
 
     def launch_tApp(self):
         tname=self.sender().text()
-        if tname not in self.tApp_Clients:
+        if tname not in self.tApp_Clients or self.tApp_Clients[tname].pid() is None:
             self.tApp_Clients[tname]=QProcess()
             self.tApp_Clients[tname].start('python '+self.toolApps[tname])
         elif self.tApp_Clients[tname].pid()>0:
@@ -685,9 +685,9 @@ class XModFit(QWidget):
             # self.xLineEdit.setText(text)
             self.fitButton.setEnabled(True)
         else:
-            self.fitButton.setEnabled(False)
-        self.update_plot()
-        self.xChanged()
+            self.fitButton.setDisabled(True)
+        # self.update_plot()
+        # self.xChanged()
         self.errorAvailable = False
         self.reuse_sampler = False
         self.calcConfInterButton.setDisabled(True)
@@ -731,7 +731,7 @@ class XModFit(QWidget):
         #     txt=item.text()
         #     self.pfnames=self.pfnames+[txt.split('<>')[0]+':'+key for key in self.data[txt].keys()]
         self.dataFileSelectionChanged()
-        self.xChanged()
+        # self.xChanged()
         self.dataListWidget.itemSelectionChanged.connect(self.dataFileSelectionChanged)
         #self.update_plot()
 
