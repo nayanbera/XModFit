@@ -33,6 +33,7 @@ import pandas as pd
 from functools import partial
 import pylab as pl
 from scipy.stats import chi2
+from scipy.interpolate import interp1d
 import math
 
 class minMaxDialog(QDialog):
@@ -961,11 +962,12 @@ class XModFit(QWidget):
                 fitTableWidget.setCellWidget(row,0,QLabel(fpar))
                 fitTableWidget.setItem(row,1,QTableWidgetItem(self.format%self.fit.result.params[fpar].value))
                 if self.fit.result.params[fpar].stderr is not None and self.fit.result.params[fpar].stderr!=0.0:
-                    fitTableWidget.setItem(row,2,QTableWidgetItem(self.format % (self.fit.result.params[fpar].value - 5*self.fit.result.params[fpar].stderr)))
-                    fitTableWidget.setItem(row,3,QTableWidgetItem(self.format % (self.fit.result.params[fpar].value + 5*self.fit.result.params[fpar].stderr)))
+                    errper=5*self.fit.result.params[fpar].stderr/self.fit.result.params[fpar].value
+                    fitTableWidget.setItem(row,2,QTableWidgetItem('%.3f' % (errper)))
+                    fitTableWidget.setItem(row,3,QTableWidgetItem('%.3f' % (errper)))
                 else:
-                    fitTableWidget.setItem(row, 2, QTableWidgetItem(self.format % (0.9*self.fit.result.params[fpar].value)))
-                    fitTableWidget.setItem(row, 3, QTableWidgetItem(self.format % (1.1*self.fit.result.params[fpar].value)))
+                    fitTableWidget.setItem(row, 2, QTableWidgetItem('%.3f' % 10))
+                    fitTableWidget.setItem(row, 3, QTableWidgetItem('%.3f' % 10))
                 fitTableWidget.setItem(row,4, QTableWidgetItem('20'))
                 self.calcErrPushButtons[fpar]=QPushButton('Calculate')
                 fitTableWidget.setCellWidget(row, 5, self.calcErrPushButtons[fpar])
@@ -1027,15 +1029,40 @@ class XModFit(QWidget):
                                                                 stralign='left',numalign='left',tablefmt='simple'))
 
 
+    def checkMinMaxErrLimits(self,fpar,vmin,vmax):
+        self.fit.fit_params[fpar].vary=False
+        for key in self.minimafitparameters:  # Putting back the minima parameters
+            self.fit.fit_params[key].value = self.minimafitparameters[key].value
+        self.fit.fit_params[fpar].value = vmin
+        fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
+                                                fit_method=self.fit_method,
+                                                maxiter=int(self.fitIterationLineEdit.text()))
+        if self.fit.result.redchi>self.targetchisqr or self.fit.fit_params[fpar].min>vmin:
+            left_limit_ok=True
+        else:
+            left_limit_ok=False
+        for key in self.minimafitparameters:  # Putting back the minima parameters
+            self.fit.fit_params[key].value = self.minimafitparameters[key].value
+        self.fit.fit_params[fpar].value = vmax
+        fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
+                                                fit_method=self.fit_method,
+                                                maxiter=int(self.fitIterationLineEdit.text()))
+        if self.fit.result.redchi>self.targetchisqr or self.fit.fit_params[fpar].max<vmax:
+            right_limit_ok=True
+        else:
+            right_limit_ok=False
+        self.fit.fit_params[fpar].vary=True
+        return left_limit_ok, right_limit_ok
+
+
     def calcErrPushButtonClicked(self,row,fpar):
         for key in self.minimafitparameters:
             self.fit.fit_params[key].value = self.minimafitparameters[key].value
-        vmax = float(self.confIntervalWidget.fitParamTableWidget.item(row, 3).text())
-        vmin = float(self.confIntervalWidget.fitParamTableWidget.item(row, 2).text())
-        Nval = int(self.confIntervalWidget.fitParamTableWidget.item(row, 4).text())
+
         self.fit.fit_params[fpar].vary=False
         redchi_r=[]
         self.errProgressBars[fpar].setMinimum(0)
+        Nval = int(self.confIntervalWidget.fitParamTableWidget.item(row, 4).text())
         self.errProgressBars[fpar].setMaximum(Nval)
         #Getting the chi-sqr value at the minima position keeping the value of fpar fixed at the minima position
         fit_report, mesg =self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale, fit_method=self.fit_method,
@@ -1043,74 +1070,84 @@ class XModFit(QWidget):
         self.setTargetChiSqr()
         redchi_r.append([self.fit.fit_params[fpar].value, self.fit.result.redchi])
         self.errProgressBars[fpar].setValue(1)
-        #Fitting the right hand side of the minima starting from the first point after minima
         value=self.fit.result.params[fpar].value
-        self.min_value[fpar]=value
-        pvalues=np.linspace(value+(vmax-value)*2/Nval, vmax, int(Nval/2))
-        i=1
-        for parvalue in pvalues:
-            for key in self.minimafitparameters: # Putting back the minima parameters
+        vmax = value*(1.0+float(self.confIntervalWidget.fitParamTableWidget.item(row, 3).text())/100.0)
+        vmin = value*(1.0-float(self.confIntervalWidget.fitParamTableWidget.item(row, 2).text())/100.0)
+
+        left_limit_ok,right_limit_ok=self.checkMinMaxErrLimits(fpar,vmin,vmax)
+        self.fit.fit_params[fpar].vary = False
+        if left_limit_ok and right_limit_ok:
+            # Fitting the right hand side of the minima starting from the first point after minima
+            self.min_value[fpar]=value
+            pvalues=np.linspace(value+(vmax-value)*2/Nval, vmax, int(Nval/2))
+            i=1
+            for parvalue in pvalues:
+                for key in self.minimafitparameters: # Putting back the minima parameters
+                    self.fit.fit_params[key].value = self.minimafitparameters[key].value
+                self.fit.fit_params[fpar].value=parvalue
+                fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
+                                                        fit_method=self.fit_method,
+                                                        maxiter=int(self.fitIterationLineEdit.text()))
+                if self.fit.result.success:
+                    redchi_r.append([parvalue,self.fit.result.redchi])
+                i+=1
+                self.errProgressBars[fpar].setValue(i)
+                QApplication.processEvents()
+
+
+            step=(value-vmin)*2/Nval
+            redchi_l=[redchi_r[0]]
+
+            #Fitting the left hand of the minima starting from the minima point
+            pvalues=np.linspace(value-step, vmin, int(Nval / 2))
+            for parvalue in pvalues:
+                for key in self.minimafitparameters: # Putting back the minima parameters
+                    self.fit.fit_params[key].value = self.minimafitparameters[key].value
+                self.fit.fit_params[fpar].value = parvalue
+                fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
+                                                        fit_method=self.fit_method,
+                                                        maxiter=int(self.fitIterationLineEdit.text()))
+                if self.fit.result.success:
+                    redchi_l.append([parvalue, self.fit.result.redchi])
+                i+=1
+                self.errProgressBars[fpar].setValue(i)
+                QApplication.processEvents()
+
+            chidata=np.array(redchi_r+redchi_l[1:])
+            self.chidata[fpar]=chidata[chidata[:,0].argsort()]
+            for key in self.minimafitparameters:
                 self.fit.fit_params[key].value = self.minimafitparameters[key].value
-            self.fit.fit_params[fpar].value=parvalue
+            self.fit.fit_params[fpar].vary = True
             fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
                                                     fit_method=self.fit_method,
                                                     maxiter=int(self.fitIterationLineEdit.text()))
-            if self.fit.result.success:
-                redchi_r.append([parvalue,self.fit.result.redchi])
-            i+=1
-            self.errProgressBars[fpar].setValue(i)
-            QApplication.processEvents()
 
 
-        step=(value-vmin)*2/Nval
-        redchi_l=[redchi_r[0]]
+            rvalues = np.array(redchi_r)
+            if self.targetchisqr < np.max(rvalues[:, 1]):
+                fn=interp1d(rvalues[:, 1], rvalues[:, 0],kind='linear')
+                self.right_limit[fpar] = fn(self.targetchisqr)
+                self.confIntervalWidget.fitParamTableWidget.item(row, 8).setText(self.format % (self.right_limit[fpar]))
+            else:
+                self.right_limit[fpar] = None
+                self.confIntervalWidget.fitParamTableWidget.item(row, 8).setText('None')
 
-        #Fitting the left hand of the minima starting from the minima point
-        pvalues=np.linspace(value-step, vmin, int(Nval / 2))
-        for parvalue in pvalues:
-            for key in self.minimafitparameters: # Putting back the minima parameters
-                self.fit.fit_params[key].value = self.minimafitparameters[key].value
-            self.fit.fit_params[fpar].value = parvalue
-            fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
-                                                    fit_method=self.fit_method,
-                                                    maxiter=int(self.fitIterationLineEdit.text()))
-            if self.fit.result.success:
-                redchi_l.append([parvalue, self.fit.result.redchi])
-            i+=1
-            self.errProgressBars[fpar].setValue(i)
-            QApplication.processEvents()
-
-        chidata=np.array(redchi_r+redchi_l[1:])
-        self.chidata[fpar]=chidata[chidata[:,0].argsort()]
-        for key in self.minimafitparameters:
-            self.fit.fit_params[key].value = self.minimafitparameters[key].value
-        self.fit.fit_params[fpar].vary = True
-        fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
-                                                fit_method=self.fit_method,
-                                                maxiter=int(self.fitIterationLineEdit.text()))
-
-
-        rvalues = np.array(redchi_r)
-        if self.targetchisqr < np.max(rvalues[:, 1]):
-            self.right_limit[fpar] = np.interp([self.targetchisqr], rvalues[:, 1], rvalues[:, 0])[0]
-            self.confIntervalWidget.fitParamTableWidget.item(row, 8).setText(self.format % (self.right_limit[fpar]))
+            lvalues = np.array(redchi_l)
+            if self.targetchisqr < np.max(lvalues[:, 1]):
+                fn=interp1d(lvalues[:, 1], lvalues[:, 0],kind='linear')
+                self.left_limit[fpar] = fn(self.targetchisqr)
+                self.confIntervalWidget.fitParamTableWidget.item(row, 7).setText(self.format % (self.left_limit[fpar]))
+            else:
+                self.left_limit[fpar] = None
+                self.confIntervalWidget.fitParamTableWidget.item(row, 7).setText('None')
+            self.confIntervalWidget.fitParamTableWidget.resizeColumnsToContents()
+            # Plotting the data
+            if not self.calcAll:
+                self.plotErrPushButtonClicked(row, fpar)
+        elif left_limit_ok:
+            QMessageBox.warning(self,'Limit Warning','Max limit is not enough to reach the target chi-square. Increase the Max limit',QMessageBox.Ok)
         else:
-            self.right_limit[fpar] = None
-            self.confIntervalWidget.fitParamTableWidget.item(row, 8).setText('None')
-
-        lvalues = np.array(redchi_l)
-        if self.targetchisqr < np.max(lvalues[:, 1]):
-            self.left_limit[fpar] = np.interp([self.targetchisqr], lvalues[:, 1], lvalues[:, 0])[0]
-            self.confIntervalWidget.fitParamTableWidget.item(row, 7).setText(self.format % (self.left_limit[fpar]))
-        else:
-            self.left_limit[fpar] = None
-            self.confIntervalWidget.fitParamTableWidget.item(row, 7).setText('None')
-
-
-        # Plotting the data
-        if not self.calcAll:
-            self.plotErrPushButtonClicked(row, fpar)
-
+            QMessageBox.warning(self, 'Limit Warning', 'Min limit is not enough to reach the target chi-square. Increase the Min limit', QMessageBox.Ok)
 
 
 
@@ -1122,13 +1159,20 @@ class XModFit(QWidget):
             pl.axhline(self.minchisqr,color='k',lw=1,ls='--')
             pl.axhline(self.targetchisqr,color='k',lw=1,ls='-')
             pl.axvline(self.min_value[fpar],color='b',lw=2,ls='-')
-            pl.text(self.min_value[fpar],1.01*self.minchisqr,self.format%self.min_value[fpar],rotation='vertical')
+            # pl.text(self.min_value[fpar],1.01*self.minchisqr,self.format%self.min_value[fpar],rotation='vertical')
             if self.right_limit[fpar] is not None:
                 pl.axvline(self.right_limit[fpar],color='b',lw=1,ls='--')
-                pl.text(self.right_limit[fpar], 1.01*self.targetchisqr, self.format%self.right_limit[fpar],rotation='vertical')
+                # pl.text(self.right_limit[fpar], 1.01*self.targetchisqr, self.format%self.right_limit[fpar],rotation='vertical')
+                right_error = self.right_limit[fpar]-self.min_value[fpar]
+            else:
+                rigt_error='None'
             if self.left_limit[fpar] is not None:
                 pl.axvline(self.left_limit[fpar],color='b',lw=1,ls='--')
-                pl.text(self.left_limit[fpar], 1.01*self.targetchisqr, self.format% self.left_limit[fpar],rotation='vertical')
+                # pl.text(self.left_limit[fpar], 1.01*self.targetchisqr, self.format% self.left_limit[fpar],rotation='vertical')
+                left_error = self.left_limit[fpar]-self.min_value[fpar]
+            else:
+                left_error='None'
+            pl.title('%.3e$^{%.3e}_{%.3e}$'%(self.min_value[fpar], right_error, left_error))
             pl.xlabel(fpar)
             pl.ylabel('\u03c7$^2$')
         else:
@@ -1157,29 +1201,58 @@ class XModFit(QWidget):
             rows=math.ceil(np.sqrt(Nplots))
             fig,ax=pl.subplots(rows,rows,sharey='row')
             i=1
-            if rows<2:
-                ax.plot(self.chidata[pkey[i - 1]][:, 0], self.chidata[pkey[i - 1]][:, 1], '.')
+            # if rows<2:
+            #     ax.plot(self.chidata[pkey[i - 1]][:, 0], self.chidata[pkey[i - 1]][:, 1], '.')
+            #     ax.set_xlabel(pkey[i - 1])
+            #     ax.set_ylabel('chi-sqr')
+            if rows==1:
+                ax.plot(self.chidata[pkey[i - 1]][:, 0], self.chidata[pkey[i - 1]][:, 1], 'r.')
+                ax.axhline(self.minchisqr, color='k', lw=1, ls='--')
+                ax.axhline(self.targetchisqr, color='k', lw=1, ls='-')
+                ax.axvline(self.min_value[pkey[i - 1]], color='b', lw=2, ls='-')
+                # ax[row,col].text(self.min_value[pkey[i-1]], 1.01 * self.minchisqr, self.format % self.min_value[pkey[i-1]],rotation='vertical')
+                if self.right_limit[pkey[i - 1]] is not None:
+                    ax.axvline(self.right_limit[pkey[i - 1]], color='b', lw=1, ls='--')
+                    right_error = self.right_limit[pkey[i - 1]] - self.min_value[pkey[i - 1]]
+                    # ax[row,col].text(self.right_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.right_limit[pkey[i-1]],rotation='vertical')
+                else:
+                    right_error = 'None'
+                if self.left_limit[pkey[i - 1]] is not None:
+                    ax.axvline(self.left_limit[pkey[i - 1]], color='b', lw=1, ls='--')
+                    left_error = self.left_limit[pkey[i - 1]] - self.min_value[pkey[i - 1]]
+                    # ax[row, col].text(self.left_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.left_limit[pkey[i-1]],rotation='vertical')
+                else:
+                    left_error = 'None'
+                ax.set_title('%.3e$^{%.3e}_{%.3e}$' % (self.min_value[pkey[i - 1]], right_error, left_error))
                 ax.set_xlabel(pkey[i - 1])
                 ax.set_ylabel('chi-sqr')
-            for row in range(rows):
-                for col in range(rows):
-                    if i<=Nplots:
-                        ax[row,col].plot(self.chidata[pkey[i-1]][:,0],self.chidata[pkey[i-1]][:,1],'r.')
-                        ax[row,col].axhline(self.minchisqr, color='k', lw=1, ls='--')
-                        ax[row,col].axhline(self.targetchisqr, color='k', lw=1, ls='-')
-                        ax[row,col].axvline(self.min_value[pkey[i-1]], color='b', lw=2, ls='-')
-                        ax[row,col].text(self.min_value[pkey[i-1]], 1.01 * self.minchisqr, self.format % self.min_value[pkey[i-1]],rotation='vertical')
-                        if self.right_limit[pkey[i-1]] is not None:
-                            ax[row,col].axvline(self.right_limit[pkey[i-1]], color='b', lw=1, ls='--')
-                            ax[row,col].text(self.right_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.right_limit[pkey[i-1]],rotation='vertical')
-                        if self.left_limit[pkey[i-1]] is not None:
-                            ax[row,col].axvline(self.left_limit[pkey[i-1]], color='b', lw=1, ls='--')
-                            ax[row, col].text(self.left_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.left_limit[pkey[i-1]],rotation='vertical')
-                        ax[row,col].set_xlabel(pkey[i-1])
-                        ax[row,col].set_ylabel('chi-sqr')
-                    else:
-                        ax[row,col].axis('off')
-                    i+=1
+            else:
+                for row in range(rows):
+                    for col in range(rows):
+                        if i<=Nplots:
+                            ax[row,col].plot(self.chidata[pkey[i-1]][:,0],self.chidata[pkey[i-1]][:,1],'r.')
+                            ax[row,col].axhline(self.minchisqr, color='k', lw=1, ls='--')
+                            ax[row,col].axhline(self.targetchisqr, color='k', lw=1, ls='-')
+                            ax[row,col].axvline(self.min_value[pkey[i-1]], color='b', lw=2, ls='-')
+                            # ax[row,col].text(self.min_value[pkey[i-1]], 1.01 * self.minchisqr, self.format % self.min_value[pkey[i-1]],rotation='vertical')
+                            if self.right_limit[pkey[i-1]] is not None:
+                                ax[row,col].axvline(self.right_limit[pkey[i-1]], color='b', lw=1, ls='--')
+                                right_error=self.right_limit[pkey[i-1]]-self.min_value[pkey[i-1]]
+                                # ax[row,col].text(self.right_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.right_limit[pkey[i-1]],rotation='vertical')
+                            else:
+                                right_error='None'
+                            if self.left_limit[pkey[i-1]] is not None:
+                                ax[row,col].axvline(self.left_limit[pkey[i-1]], color='b', lw=1, ls='--')
+                                left_error=self.left_limit[pkey[i-1]]-self.min_value[pkey[i-1]]
+                                # ax[row, col].text(self.left_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.left_limit[pkey[i-1]],rotation='vertical')
+                            else:
+                                left_error='None'
+                            ax[row,col].set_title('%.3e$^{%.3e}_{%.3e}$'%(self.min_value[pkey[i-1]], right_error,left_error))
+                            ax[row,col].set_xlabel(pkey[i-1])
+                            ax[row,col].set_ylabel('chi-sqr')
+                        else:
+                            ax[row,col].axis('off')
+                        i+=1
             pl.tight_layout()
 
     def saveAllErr(self):

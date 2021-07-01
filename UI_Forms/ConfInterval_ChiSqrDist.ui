@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>2132</width>
-    <height>957</height>
+    <width>1296</width>
+    <height>870</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -210,7 +210,7 @@
      </column>
      <column>
       <property name="text">
-       <string>Min</string>
+       <string>Min(%)</string>
       </property>
       <property name="font">
        <font>
@@ -222,7 +222,7 @@
      </column>
      <column>
       <property name="text">
-       <string>Max</string>
+       <string>Max(%)</string>
       </property>
       <property name="font">
        <font>
