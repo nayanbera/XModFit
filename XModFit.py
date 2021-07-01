@@ -1170,8 +1170,12 @@ class XModFit(QWidget):
 
         elif left_limit_ok:
             QMessageBox.warning(self,'Limit Warning','Max limit is not enough to reach the target chi-square for %s. Increase the Max limit'%fpar,QMessageBox.Ok)
+            self.errProgressBars[fpar].setValue(0)
+            QApplication.processEvents()
         else:
             QMessageBox.warning(self, 'Limit Warning', 'Min limit is not enough to reach the target chi-square for %s. Increase the Min limit'%fpar, QMessageBox.Ok)
+            self.errProgressBars[fpar].setValue(0)
+            QApplication.processEvents()
 
         # Going back to the minimum chi-sqr condition
         for key in self.minimafitparameters:
@@ -1393,7 +1397,7 @@ class XModFit(QWidget):
                                                                'y': (self.fit.y[self.fit.imin:self.fit.imax + 1]-self.fit.yfit)/self.fit.yerr[self.fit.imin:self.fit.imax + 1]}
             self.tchisqr=chisqr
         QApplication.processEvents()
-        # QApplication.processEvents()
+
 
     def fitErrorCallback(self, params, iterations, residual, fit_scale):
         time_taken=time.time()-self.start_time
@@ -1411,7 +1415,7 @@ class XModFit(QWidget):
             if self.fit.emcee_params[key].vary:
                 l,p,r = np.percentile(self.fit.result.flatchain[key], [32, 50, 68])
                 mesg.append([key, p, l-p, r-p])
-        names=[name for name in self.fit.result.var_names]# if name!='__lnsigma']
+        names=[name for name in self.fit.result.var_names if name!='__lnsigma']
         values=[self.fit.result.params[name].value for name in names]
         # fig = corner.corner(self.fit.result.flatchain[names], labels=names, bins=50,
         #                     truths = values, quantiles = [0.159, 0.5, 0.842], show_titles = True, title_fmt='.3f',
