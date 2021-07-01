@@ -343,7 +343,7 @@ class XModFit(QWidget):
 
     def launch_tApp(self):
         tname=self.sender().text()
-        if tname not in self.tApp_Clients:
+        if tname not in self.tApp_Clients or self.tApp_Clients[tname].pid() is None:
             self.tApp_Clients[tname]=QProcess()
             self.tApp_Clients[tname].start('python '+self.toolApps[tname])
         elif self.tApp_Clients[tname].pid()>0:
@@ -685,9 +685,9 @@ class XModFit(QWidget):
             # self.xLineEdit.setText(text)
             self.fitButton.setEnabled(True)
         else:
-            self.fitButton.setEnabled(False)
-        self.update_plot()
-        self.xChanged()
+            self.fitButton.setDisabled(True)
+        # self.update_plot()
+        # self.xChanged()
         self.errorAvailable = False
         self.reuse_sampler = False
         self.calcConfInterButton.setDisabled(True)
@@ -731,7 +731,7 @@ class XModFit(QWidget):
         #     txt=item.text()
         #     self.pfnames=self.pfnames+[txt.split('<>')[0]+':'+key for key in self.data[txt].keys()]
         self.dataFileSelectionChanged()
-        self.xChanged()
+        # self.xChanged()
         self.dataListWidget.itemSelectionChanged.connect(self.dataFileSelectionChanged)
         #self.update_plot()
 
@@ -1059,6 +1059,7 @@ class XModFit(QWidget):
                 redchi_r.append([parvalue,self.fit.result.redchi])
             i+=1
             self.errProgressBars[fpar].setValue(i)
+            QApplication.processEvents()
 
 
         step=(value-vmin)*2/Nval
@@ -1077,6 +1078,7 @@ class XModFit(QWidget):
                 redchi_l.append([parvalue, self.fit.result.redchi])
             i+=1
             self.errProgressBars[fpar].setValue(i)
+            QApplication.processEvents()
 
         chidata=np.array(redchi_r+redchi_l[1:])
         self.chidata[fpar]=chidata[chidata[:,0].argsort()]
@@ -1108,6 +1110,8 @@ class XModFit(QWidget):
         # Plotting the data
         if not self.calcAll:
             self.plotErrPushButtonClicked(row, fpar)
+
+
 
 
     def plotErrPushButtonClicked(self,row,fpar):
