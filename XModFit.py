@@ -35,6 +35,7 @@ import pylab as pl
 from scipy.stats import chi2
 from scipy.interpolate import interp1d
 import math
+from pyqtgraph.widgets.MatplotlibWidget import MatplotlibWidget
 
 class minMaxDialog(QDialog):
     def __init__(self, value, vary=0, minimum=None, maximum=None, expr=None, brute_step=None, parent=None, title=None):
@@ -949,6 +950,8 @@ class XModFit(QWidget):
 
     def confInterval_ChiSqrDist(self):
         self.confIntervalWidget=QWidget()
+        self.confIntervalWidget.setWindowTitle("Confidence Interval Calculator")
+        self.confIntervalWidget.setWindowModality(Qt.ApplicationModal)
         uic.loadUi('./UI_Forms/ConfInterval_ChiSqrDist.ui',self.confIntervalWidget)
         self.chidata={}
         fitTableWidget = self.confIntervalWidget.fitParamTableWidget
@@ -962,7 +965,7 @@ class XModFit(QWidget):
                 fitTableWidget.setCellWidget(row,0,QLabel(fpar))
                 fitTableWidget.setItem(row,1,QTableWidgetItem(self.format%self.fit.result.params[fpar].value))
                 if self.fit.result.params[fpar].stderr is not None and self.fit.result.params[fpar].stderr!=0.0:
-                    errper=5*self.fit.result.params[fpar].stderr/self.fit.result.params[fpar].value
+                    errper=5*self.fit.result.params[fpar].stderr*100/self.fit.result.params[fpar].value
                     fitTableWidget.setItem(row,2,QTableWidgetItem('%.3f' % (errper)))
                     fitTableWidget.setItem(row,3,QTableWidgetItem('%.3f' % (errper)))
                 else:
@@ -1027,6 +1030,7 @@ class XModFit(QWidget):
         self.confIntervalWidget.errInfoTextEdit.append(tabulate(self.errInfoTable,
                                                                 headers=["Parameter","Parameter-Value","Left-Error","Right-Error"],
                                                                 stralign='left',numalign='left',tablefmt='simple'))
+        self.calcAll=False
 
 
     def checkMinMaxErrLimits(self,fpar,vmin,vmax):
@@ -1115,14 +1119,9 @@ class XModFit(QWidget):
 
             chidata=np.array(redchi_r+redchi_l[1:])
             self.chidata[fpar]=chidata[chidata[:,0].argsort()]
-            for key in self.minimafitparameters:
-                self.fit.fit_params[key].value = self.minimafitparameters[key].value
-            self.fit.fit_params[fpar].vary = True
-            fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
-                                                    fit_method=self.fit_method,
-                                                    maxiter=int(self.fitIterationLineEdit.text()))
 
 
+            # Calculating the right-limit by interpolation
             rvalues = np.array(redchi_r)
             if self.targetchisqr < np.max(rvalues[:, 1]):
                 fn=interp1d(rvalues[:, 1], rvalues[:, 0],kind='linear')
@@ -1132,6 +1131,7 @@ class XModFit(QWidget):
                 self.right_limit[fpar] = None
                 self.confIntervalWidget.fitParamTableWidget.item(row, 8).setText('None')
 
+            # Calculating the left-limit by interpolation
             lvalues = np.array(redchi_l)
             if self.targetchisqr < np.max(lvalues[:, 1]):
                 fn=interp1d(lvalues[:, 1], lvalues[:, 0],kind='linear')
@@ -1141,119 +1141,118 @@ class XModFit(QWidget):
                 self.left_limit[fpar] = None
                 self.confIntervalWidget.fitParamTableWidget.item(row, 7).setText('None')
             self.confIntervalWidget.fitParamTableWidget.resizeColumnsToContents()
+
             # Plotting the data
             if not self.calcAll:
                 self.plotErrPushButtonClicked(row, fpar)
+
+            #Showing the Errorbars
+            self.errInfoTable = []
+            key=fpar
+            if self.left_limit[key] is not None and self.right_limit[key] is not None:
+                self.errInfoTable.append([key, self.min_value[key], self.left_limit[key] - self.min_value[key],
+                                          self.right_limit[key] - self.min_value[key]])
+            elif self.left_limit[key] is None and self.right_limit[key] is not None:
+                self.errInfoTable.append([key, self.min_value[key], None,
+                                          self.right_limit[key] - self.min_value[key]])
+            elif self.left_limit[key] is not None and self.right_limit is None:
+                self.errInfoTable.append([key, self.min_value[key], self.left_limit[key] - self.min_value[key],
+                                          None])
+            else:
+                self.errInfoTable.append([key, self.min_value[key], None, None])
+            self.confIntervalWidget.errInfoTextEdit.clear()
+            self.confIntervalWidget.errInfoTextEdit.setFont(QFont("Courier", 10))
+            self.confIntervalWidget.errInfoTextEdit.append(tabulate(self.errInfoTable,
+                                                                    headers=["Parameter", "Parameter-Value",
+                                                                             "Left-Error", "Right-Error"],
+                                                                    stralign='left', numalign='left',
+                                                                    tablefmt='simple'))
+
         elif left_limit_ok:
-            QMessageBox.warning(self,'Limit Warning','Max limit is not enough to reach the target chi-square. Increase the Max limit',QMessageBox.Ok)
+            QMessageBox.warning(self,'Limit Warning','Max limit is not enough to reach the target chi-square for %s. Increase the Max limit'%fpar,QMessageBox.Ok)
         else:
-            QMessageBox.warning(self, 'Limit Warning', 'Min limit is not enough to reach the target chi-square. Increase the Min limit', QMessageBox.Ok)
+            QMessageBox.warning(self, 'Limit Warning', 'Min limit is not enough to reach the target chi-square for %s. Increase the Min limit'%fpar, QMessageBox.Ok)
 
-
+        # Going back to the minimum chi-sqr condition
+        for key in self.minimafitparameters:
+            self.fit.fit_params[key].value = self.minimafitparameters[key].value
+        self.fit.fit_params[fpar].vary = True
+        fit_report, mesg = self.fit.perform_fit(self.xmin, self.xmax, fit_scale=self.fit_scale,
+                                                fit_method=self.fit_method,
+                                                maxiter=int(self.fitIterationLineEdit.text()))
 
     def plotErrPushButtonClicked(self,row,fpar):
         if fpar in self.chidata.keys():
-            pl.ion()
-            pl.figure()
-            pl.plot(self.chidata[fpar][:, 0], self.chidata[fpar][:, 1], 'r.')
-            pl.axhline(self.minchisqr,color='k',lw=1,ls='--')
-            pl.axhline(self.targetchisqr,color='k',lw=1,ls='-')
-            pl.axvline(self.min_value[fpar],color='b',lw=2,ls='-')
+            mw=MatplotlibWidget()
+            mw.setWindowModality(Qt.ApplicationModal)
+            subplot=mw.getFigure().add_subplot(111)
+            subplot.plot(self.chidata[fpar][:, 0], self.chidata[fpar][:, 1], 'r.')
+            subplot.axhline(self.minchisqr,color='k',lw=1,ls='--')
+            subplot.axhline(self.targetchisqr,color='k',lw=1,ls='-')
+            subplot.axvline(self.min_value[fpar],color='b',lw=2,ls='-')
             # pl.text(self.min_value[fpar],1.01*self.minchisqr,self.format%self.min_value[fpar],rotation='vertical')
             if self.right_limit[fpar] is not None:
-                pl.axvline(self.right_limit[fpar],color='b',lw=1,ls='--')
+                subplot.axvline(self.right_limit[fpar],color='b',lw=1,ls='--')
                 # pl.text(self.right_limit[fpar], 1.01*self.targetchisqr, self.format%self.right_limit[fpar],rotation='vertical')
                 right_error = self.right_limit[fpar]-self.min_value[fpar]
             else:
                 rigt_error='None'
             if self.left_limit[fpar] is not None:
-                pl.axvline(self.left_limit[fpar],color='b',lw=1,ls='--')
+                subplot.axvline(self.left_limit[fpar],color='b',lw=1,ls='--')
                 # pl.text(self.left_limit[fpar], 1.01*self.targetchisqr, self.format% self.left_limit[fpar],rotation='vertical')
                 left_error = self.left_limit[fpar]-self.min_value[fpar]
             else:
                 left_error='None'
-            pl.title('%.3e$^{%.3e}_{%.3e}$'%(self.min_value[fpar], right_error, left_error))
-            pl.xlabel(fpar)
-            pl.ylabel('\u03c7$^2$')
+            subplot.set_title('%.3e$^{%.3e}_{%.3e}$'%(self.min_value[fpar], right_error, left_error))
+            subplot.set_xlabel(fpar)
+            subplot.set_ylabel('\u03c7$^2$')
+            mw.getFigure().tight_layout()
+            mw.draw()
+            mw.show()
         else:
             QMessageBox.warning(self, 'Data error', 'No data available for plotting. Calculate first', QMessageBox.Ok)
-        # if fpar in self.chidata.keys():
-        #     x=self.chidata[fpar][:,0]
-        #     y=self.chidata[fpar][:,1]
-        #     data = {'data': pd.DataFrame(list(zip(x, y)), columns=[fpar, 'chi_sqr']),
-        #             'meta': {'col_names': [fpar, 'chi_sqr']}}
-        #     data_dlg = Data_Dialog(data=data, parent=self, expressions={},
-        #                            plotIndex=None, colors=None)
-        #     data_dlg.setModal(True)
-        #     data_dlg.closePushButton.setText('Close')
-        #     data_dlg.tabWidget.setCurrentIndex(2)
-        #     data_dlg.dataFileLineEdit.setText('None')
-        #     data_dlg.exec_()
-        # else:
-        #     QMessageBox.warning(self,'Data error','No data available for plotting. Calculate first',QMessageBox.Ok)
 
 
     def plotAllErrPushButtonClicked(self):
         pkey=list(self.chidata.keys())
         Nplots=len(pkey)
         if Nplots>0:
-            pl.ion()
+            mw=MatplotlibWidget()
+            mw.setWindowModality(Qt.ApplicationModal)
             rows=math.ceil(np.sqrt(Nplots))
-            fig,ax=pl.subplots(rows,rows,sharey='row')
             i=1
-            # if rows<2:
-            #     ax.plot(self.chidata[pkey[i - 1]][:, 0], self.chidata[pkey[i - 1]][:, 1], '.')
-            #     ax.set_xlabel(pkey[i - 1])
-            #     ax.set_ylabel('chi-sqr')
-            if rows==1:
-                ax.plot(self.chidata[pkey[i - 1]][:, 0], self.chidata[pkey[i - 1]][:, 1], 'r.')
-                ax.axhline(self.minchisqr, color='k', lw=1, ls='--')
-                ax.axhline(self.targetchisqr, color='k', lw=1, ls='-')
-                ax.axvline(self.min_value[pkey[i - 1]], color='b', lw=2, ls='-')
-                # ax[row,col].text(self.min_value[pkey[i-1]], 1.01 * self.minchisqr, self.format % self.min_value[pkey[i-1]],rotation='vertical')
-                if self.right_limit[pkey[i - 1]] is not None:
-                    ax.axvline(self.right_limit[pkey[i - 1]], color='b', lw=1, ls='--')
-                    right_error = self.right_limit[pkey[i - 1]] - self.min_value[pkey[i - 1]]
-                    # ax[row,col].text(self.right_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.right_limit[pkey[i-1]],rotation='vertical')
-                else:
-                    right_error = 'None'
-                if self.left_limit[pkey[i - 1]] is not None:
-                    ax.axvline(self.left_limit[pkey[i - 1]], color='b', lw=1, ls='--')
-                    left_error = self.left_limit[pkey[i - 1]] - self.min_value[pkey[i - 1]]
-                    # ax[row, col].text(self.left_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.left_limit[pkey[i-1]],rotation='vertical')
-                else:
-                    left_error = 'None'
-                ax.set_title('%.3e$^{%.3e}_{%.3e}$' % (self.min_value[pkey[i - 1]], right_error, left_error))
-                ax.set_xlabel(pkey[i - 1])
-                ax.set_ylabel('chi-sqr')
-            else:
-                for row in range(rows):
-                    for col in range(rows):
-                        if i<=Nplots:
-                            ax[row,col].plot(self.chidata[pkey[i-1]][:,0],self.chidata[pkey[i-1]][:,1],'r.')
-                            ax[row,col].axhline(self.minchisqr, color='k', lw=1, ls='--')
-                            ax[row,col].axhline(self.targetchisqr, color='k', lw=1, ls='-')
-                            ax[row,col].axvline(self.min_value[pkey[i-1]], color='b', lw=2, ls='-')
-                            # ax[row,col].text(self.min_value[pkey[i-1]], 1.01 * self.minchisqr, self.format % self.min_value[pkey[i-1]],rotation='vertical')
-                            if self.right_limit[pkey[i-1]] is not None:
-                                ax[row,col].axvline(self.right_limit[pkey[i-1]], color='b', lw=1, ls='--')
-                                right_error=self.right_limit[pkey[i-1]]-self.min_value[pkey[i-1]]
-                                # ax[row,col].text(self.right_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.right_limit[pkey[i-1]],rotation='vertical')
-                            else:
-                                right_error='None'
-                            if self.left_limit[pkey[i-1]] is not None:
-                                ax[row,col].axvline(self.left_limit[pkey[i-1]], color='b', lw=1, ls='--')
-                                left_error=self.left_limit[pkey[i-1]]-self.min_value[pkey[i-1]]
-                                # ax[row, col].text(self.left_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.left_limit[pkey[i-1]],rotation='vertical')
-                            else:
-                                left_error='None'
-                            ax[row,col].set_title('%.3e$^{%.3e}_{%.3e}$'%(self.min_value[pkey[i-1]], right_error,left_error))
-                            ax[row,col].set_xlabel(pkey[i-1])
-                            ax[row,col].set_ylabel('chi-sqr')
+            for row in range(rows):
+                for col in range(rows):
+                    if i<=Nplots:
+                        ax=mw.getFigure().add_subplot(rows,rows,i)
+                        ax.plot(self.chidata[pkey[i-1]][:,0],self.chidata[pkey[i-1]][:,1],'r.')
+                        ax.axhline(self.minchisqr, color='k', lw=1, ls='--')
+                        ax.axhline(self.targetchisqr, color='k', lw=1, ls='-')
+                        ax.axvline(self.min_value[pkey[i-1]], color='b', lw=2, ls='-')
+                        # ax[row,col].text(self.min_value[pkey[i-1]], 1.01 * self.minchisqr, self.format % self.min_value[pkey[i-1]],rotation='vertical')
+                        if self.right_limit[pkey[i-1]] is not None:
+                            ax.axvline(self.right_limit[pkey[i-1]], color='b', lw=1, ls='--')
+                            right_error=self.right_limit[pkey[i-1]]-self.min_value[pkey[i-1]]
+                            # ax[row,col].text(self.right_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.right_limit[pkey[i-1]],rotation='vertical')
                         else:
-                            ax[row,col].axis('off')
-                        i+=1
-            pl.tight_layout()
+                            right_error='None'
+                        if self.left_limit[pkey[i-1]] is not None:
+                            ax.axvline(self.left_limit[pkey[i-1]], color='b', lw=1, ls='--')
+                            left_error=self.left_limit[pkey[i-1]]-self.min_value[pkey[i-1]]
+                            # ax[row, col].text(self.left_limit[pkey[i-1]], 1.01*self.targetchisqr, self.format % self.left_limit[pkey[i-1]],rotation='vertical')
+                        else:
+                            left_error='None'
+                        ax.set_title('%.3e$^{%.3e}_{%.3e}$'%(self.min_value[pkey[i-1]], right_error,left_error))
+                        ax.set_xlabel(pkey[i-1])
+                        ax.set_ylabel('\u03c7$^2$')
+                        # print(i,'happy')
+                    # else:
+                    #     ax.axis('off')
+                    #     print(i,'sad')
+                    i+=1
+            mw.getFigure().tight_layout()
+            mw.draw()
+            mw.show()
 
     def saveAllErr(self):
         fname=QFileDialog.getSaveFileName(self,'Provide prefix of the filename',directory=self.curDir,filter='Chi-Sqr files (*.chisqr)')[0]
@@ -1271,9 +1270,15 @@ class XModFit(QWidget):
         if fname!='':
             fh=open(fname,'w')
             fh.write('# File saved on %s\n'%time.asctime())
-            fh.write('# Error calculated using Chi-Sqr-Distribution Method')
-            fh.writelines(tabulate(self.errInfoTable, headers=["Parameter","Parameter-Value","Left-Error","Right-Error"],
-                                   stralign='left',numalign='left',tablefmt='simple'))
+            fh.write('# Error calculated using Chi-Sqr-Distribution Method\n')
+            tlines=tabulate(self.errInfoTable, headers=["Parameter","Parameter-Value","Left-Error","Right-Error"],
+                                   stralign='left',numalign='left',tablefmt='simple')
+            lines=tlines.split('\n')
+            for i,line in enumerate(lines):
+                if i<2:
+                    fh.write('#'+line+'\n')
+                else:
+                    fh.write(' '+line+'\n')
             fh.close()
 
 
