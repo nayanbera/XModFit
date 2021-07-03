@@ -1283,6 +1283,8 @@ class XModFit(QWidget):
     def confInterval_emcee(self):
         """
         """
+        self.emceeConfIntervalWidget = QWidget()
+        uic.loadUi('./UI_Forms/EMCEE_ConfInterval_Widget.ui', self.emceeConfIntervalWidget)
         if not self.errorAvailable:
             self.emcee_walker=(self.fit.result.nvarys+1)*5
         else:
