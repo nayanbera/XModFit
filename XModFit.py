@@ -35,7 +35,8 @@ import pylab as pl
 from scipy.stats import chi2
 from scipy.interpolate import interp1d
 import math
-from pyqtgraph.widgets.MatplotlibWidget import MatplotlibWidget
+from mplWidget import MplWidget
+
 
 class minMaxDialog(QDialog):
     def __init__(self, value, vary=0, minimum=None, maximum=None, expr=None, brute_step=None, parent=None, title=None):
@@ -241,6 +242,7 @@ class XModFit(QWidget):
         self.emcee_walker = 100
         self.emcee_steps = 100
         self.emcee_burn = 30
+        self.emcee_thin = 1
         self.emcee_cores = 1
         self.emcee_frac = self.emcee_burn/self.emcee_steps
         self.reuse_sampler = False
@@ -1187,7 +1189,7 @@ class XModFit(QWidget):
 
     def plotErrPushButtonClicked(self,row,fpar):
         if fpar in self.chidata.keys():
-            mw=MatplotlibWidget()
+            mw=MplWidget()
             mw.setWindowModality(Qt.ApplicationModal)
             subplot=mw.getFigure().add_subplot(111)
             subplot.plot(self.chidata[fpar][:, 0], self.chidata[fpar][:, 1], 'r.')
@@ -1200,7 +1202,7 @@ class XModFit(QWidget):
                 # pl.text(self.right_limit[fpar], 1.01*self.targetchisqr, self.format%self.right_limit[fpar],rotation='vertical')
                 right_error = self.right_limit[fpar]-self.min_value[fpar]
             else:
-                rigt_error='None'
+                right_error='None'
             if self.left_limit[fpar] is not None:
                 subplot.axvline(self.left_limit[fpar],color='b',lw=1,ls='--')
                 # pl.text(self.left_limit[fpar], 1.01*self.targetchisqr, self.format% self.left_limit[fpar],rotation='vertical')
@@ -1221,7 +1223,7 @@ class XModFit(QWidget):
         pkey=list(self.chidata.keys())
         Nplots=len(pkey)
         if Nplots>0:
-            mw=MatplotlibWidget()
+            mw=MplWidget()
             mw.setWindowModality(Qt.ApplicationModal)
             rows=math.ceil(np.sqrt(Nplots))
             i=1
@@ -1292,36 +1294,55 @@ class XModFit(QWidget):
     def confInterval_emcee(self):
         """
         """
-        self.emceeConfIntervalWidget = QWidget()
-        uic.loadUi('./UI_Forms/EMCEE_ConfInterval_Widget.ui', self.emceeConfIntervalWidget)
         if not self.errorAvailable:
-            self.emcee_walker=(self.fit.result.nvarys+1)*5
+             self.emcee_walker=(self.fit.result.nvarys+1)*5
         else:
-            # try:
-            tnum=len(self.fit.result.flatchain[self.fit.result.var_names[0]])/self.emcee_walker
-            self.emcee_frac=self.emcee_burn/(tnum/(1.0-self.emcee_frac))
-            emcee_burn=tnum*self.emcee_frac/(1.0-self.emcee_frac)
-            self.emcee_burn=int(emcee_burn+self.emcee_steps*self.emcee_frac)
-        multiInputDlg=MultiInputDialog(inputs={'MCMC Walker':self.emcee_walker,'MCMC Steps':self.emcee_steps, 'MCMC Burn':self.emcee_burn,
-                                               'Parallel Cores':self.emcee_cores,'Re-use Sampler':self.reuse_sampler},parent=self)
+        #     # try:
+             tnum=len(self.fit.result.flatchain[self.fit.result.var_names[0]])/self.emcee_walker
+             self.emcee_frac=self.emcee_burn/(tnum/(1.0-self.emcee_frac))
+             emcee_burn=tnum*self.emcee_frac/(1.0-self.emcee_frac)
+             self.emcee_burn=int(emcee_burn+self.emcee_steps*self.emcee_frac)
+        self.emceeConfIntervalWidget = QWidget()
+        self.emceeConfIntervalWidget.setWindowTitle("Confidence Interval Calculator")
+        self.emceeConfIntervalWidget.setWindowModality(Qt.ApplicationModal)
+        uic.loadUi('./UI_Forms/EMCEE_ConfInterval_Widget.ui', self.emceeConfIntervalWidget)
+        self.emceeConfIntervalWidget.MCMCWalkerLineEdit.setText(str(self.emcee_walker))
+        self.emceeConfIntervalWidget.MCMCStepsLineEdit.setText(str(self.emcee_steps))
+        self.emceeConfIntervalWidget.MCMCBurnLineEdit.setText(str(self.emcee_burn))
+        self.emceeConfIntervalWidget.MCMCThinLineEdit.setText(str(self.emcee_thin))
+        self.emceeConfIntervalWidget.ParallelCoresLineEdit.setText(str(self.emcee_cores))
         if not self.errorAvailable:
-            multiInputDlg.inputFields['Re-use Sampler'].setChecked(False)
-            multiInputDlg.inputFields['Re-use Sampler'].setDisabled(True)
+            self.emceeConfIntervalWidget.reuseSamplerCheckBox.setChecked(False)
+            self.emceeConfIntervalWidget.reuseSamplerCheckBox.setDisabled(True)
             self.reuse_sampler=False
         else:
-            multiInputDlg.inputFields['Re-use Sampler'].setEnabled(True)
-            multiInputDlg.inputFields['Re-use Sampler'].setChecked(True)
-        # multiInputDlg.show()
-        if multiInputDlg.exec_():
-            self.emcee_walker = int(multiInputDlg.inputs['MCMC Walker'])
-            self.emcee_steps = int(multiInputDlg.inputs['MCMC Steps'])
-            self.emcee_burn = int(multiInputDlg.inputs['MCMC Burn'])
-            self.emcee_cores = int(multiInputDlg.inputs['Parallel Cores'])
-            self.reuse_sampler = multiInputDlg.inputs['Re-use Sampler']
-            if not self.errorAvailable:
-                self.emcee_frac=self.emcee_burn/self.emcee_steps
-            self.doFit(fit_method='emcee', emcee_walker=self.emcee_walker, emcee_steps=self.emcee_steps,
-                       emcee_cores=self.emcee_cores, reuse_sampler=self.reuse_sampler, emcee_burn=self.emcee_burn)
+            self.emceeConfIntervalWidget.reuseSamplerCheckBox.setChecked(True)
+            self.emceeConfIntervalWidget.reuseSamplerCheckBox.setDisabled(True)
+
+
+        # multiInputDlg=MultiInputDialog(inputs={'MCMC Walker':self.emcee_walker,'MCMC Steps':self.emcee_steps, 'MCMC Burn':self.emcee_burn,
+        #                                        'Parallel Cores':self.emcee_cores,'Re-use Sampler':self.reuse_sampler},parent=self)
+        # if not self.errorAvailable:
+        #     multiInputDlg.inputFields['Re-use Sampler'].setChecked(False)
+        #     multiInputDlg.inputFields['Re-use Sampler'].setDisabled(True)
+        #     self.reuse_sampler=False
+        # else:
+        #     multiInputDlg.inputFields['Re-use Sampler'].setEnabled(True)
+        #     multiInputDlg.inputFields['Re-use Sampler'].setChecked(True)
+        # # multiInputDlg.show()
+        self.emceeConfIntervalWidget.showMaximized()
+        # if multiInputDlg.exec_():
+        #     self.emcee_walker = int(multiInputDlg.inputs['MCMC Walker'])
+        #     self.emcee_steps = int(multiInputDlg.inputs['MCMC Steps'])
+        #     self.emcee_burn = int(multiInputDlg.inputs['MCMC Burn'])
+        #     self.emcee_cores = int(multiInputDlg.inputs['Parallel Cores'])
+        #     self.reuse_sampler = multiInputDlg.inputs['Re-use Sampler']
+        #     if not self.errorAvailable:
+        #         self.emcee_frac=self.emcee_burn/self.emcee_steps
+        #     self.doFit(fit_method='emcee', emcee_walker=self.emcee_walker, emcee_steps=self.emcee_steps,
+        #                emcee_cores=self.emcee_cores, reuse_sampler=self.reuse_sampler, emcee_burn=self.emcee_burn)
+
+
 
 
     def conf_interv_status(self,params,iterations,residual,fit_scale):

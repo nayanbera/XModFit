@@ -160,7 +160,7 @@
      </widget>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>3</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="chainTab">
        <attribute name="title">
@@ -168,7 +168,7 @@
        </attribute>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
-         <widget class="MatplotlibWidget" name="chainMPLWidget" native="true"/>
+         <widget class="MplWidget" name="chainMPLWidget" native="true"/>
         </item>
        </layout>
       </widget>
@@ -178,7 +178,7 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="MatplotlibWidget" name="correlationMPLWidget" native="true"/>
+         <widget class="MplWidget" name="correlationMPLWidget" native="true"/>
         </item>
        </layout>
       </widget>
@@ -188,7 +188,7 @@
        </attribute>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="MatplotlibWidget" name="cornerPlotMPLWidget" native="true"/>
+         <widget class="MplWidget" name="cornerPlotMPLWidget" native="true"/>
         </item>
        </layout>
       </widget>
@@ -233,9 +233,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>MatplotlibWidget</class>
+   <class>MplWidget</class>
    <extends>QWidget</extends>
-   <header>pyqtgraph</header>
+   <header>mplWidget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
