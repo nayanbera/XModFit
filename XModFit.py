@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QLineEdit, QVBoxLayout, QMessageBox, QCheckBox, \
     QComboBox, QListWidget, QDialog, QFileDialog, QAbstractItemView, QSplitter, QSizePolicy, QAbstractScrollArea, QHBoxLayout, QTextEdit, QShortcut,\
-    QProgressDialog, QDesktopWidget, QSlider, QTabWidget, QMenuBar, QAction, QTableWidgetSelectionRange, QProgressBar, QMenu, QTableWidgetItem
+    QProgressDialog, QDesktopWidget, QSlider, QTabWidget, QMenuBar, QAction, QTableWidgetSelectionRange, QProgressBar, QMenu, QTableWidgetItem, QTreeWidgetItem
 from PyQt5.QtGui import QKeySequence, QFont, QDoubleValidator, QIntValidator
 from PyQt5.QtCore import Qt, QProcess
 from PyQt5 import uic
@@ -922,7 +922,8 @@ class XModFit(QWidget):
                 else:
                     self.errorAvailable = True
                     self.fit.functionCalled.disconnect()
-                    self.fitErrorDialog()
+                    self.perform_post_sampling_tasks()
+                    # self.fitErrorDialog()
                     self.showConfIntervalButton.setEnabled(True)
             except:
                 try:
@@ -1319,7 +1320,8 @@ class XModFit(QWidget):
             self.emceeConfIntervalWidget.reuseSamplerCheckBox.setChecked(True)
             self.emceeConfIntervalWidget.reuseSamplerCheckBox.setDisabled(True)
 
-
+        self.emceeConfIntervalWidget.startSamplingPushButton.clicked.connect(self.start_emcee_sampling)
+        self.emceeConfIntervalWidget.progressBar.setValue(0)
         # multiInputDlg=MultiInputDialog(inputs={'MCMC Walker':self.emcee_walker,'MCMC Steps':self.emcee_steps, 'MCMC Burn':self.emcee_burn,
         #                                        'Parallel Cores':self.emcee_cores,'Re-use Sampler':self.reuse_sampler},parent=self)
         # if not self.errorAvailable:
@@ -1342,7 +1344,19 @@ class XModFit(QWidget):
         #     self.doFit(fit_method='emcee', emcee_walker=self.emcee_walker, emcee_steps=self.emcee_steps,
         #                emcee_cores=self.emcee_cores, reuse_sampler=self.reuse_sampler, emcee_burn=self.emcee_burn)
 
+    def update_emcee_parameters(self):
+        self.emcee_walker=int(self.emceeConfIntervalWidget.MCMCWalkerLineEdit.text())
+        self.emcee_steps=int(self.emceeConfIntervalWidget.MCMCStepsLineEdit.text())
+        self.emcee_burn=int(self.emceeConfIntervalWidget.MCMCBurnLineEdit.text())
+        self.emcee_thin = int(self.emceeConfIntervalWidget.MCMCThinLineEdit.text())
+        self.emcee_cores = int(self.emceeConfIntervalWidget.ParallelCoresLineEdit.text())
 
+    def start_emcee_sampling(self):
+        self.update_emcee_parameters()
+        if not self.errorAvailable:
+            self.emcee_frac=self.emcee_burn/self.emcee_steps
+        self.doFit(fit_method='emcee', emcee_walker=self.emcee_walker, emcee_steps=self.emcee_steps,
+                       emcee_cores=self.emcee_cores, reuse_sampler=self.reuse_sampler, emcee_burn=self.emcee_burn)
 
 
     def conf_interv_status(self,params,iterations,residual,fit_scale):
@@ -1370,32 +1384,24 @@ class XModFit(QWidget):
             self.fitInfoDlg.setModal(True)
             self.fitInfoDlg.show()
         else:
-            self.fitInfoDlg = QDialog(self)
-            vblayout = QVBoxLayout(self.fitInfoDlg)
-            self.fitIterLabel = QLabel('Time left (hh:mm:ss): %s'%('N.A.'), self.fitInfoDlg)
-            vblayout.addWidget(self.fitIterLabel)
-            self.errProgBar=QProgressBar(self.fitInfoDlg)
-            self.errProgBar.setMaximum(emcee_walker*emcee_steps)
-            self.errProgBar.setMinimum(0)
-            self.errProgBar.setValue(0)
-            vblayout.addWidget(self.errProgBar)
-            self.stopFitPushButton = QPushButton('Stop')
-            vblayout.addWidget(self.stopFitPushButton)
-            self.stopFitPushButton.clicked.connect(self.stopFit)
-            self.fitInfoDlg.setWindowTitle('0% complete')
-            self.fitInfoDlg.setModal(True)
-            self.fitInfoDlg.show()
-        
+            self.emceeConfIntervalWidget.fitIterLabel.setText('Time left (hh:mm:ss): %s'%('N.A.'))
+            self.emceeConfIntervalWidget.progressBar.setMaximum(emcee_walker*emcee_steps)
+            self.emceeConfIntervalWidget.progressBar.setMinimum(0)
+            self.emceeConfIntervalWidget.progressBar.setValue(0)
+            self.emceeConfIntervalWidget.stopSamplingPushButton.clicked.connect(self.stopFit)
+
     def stopFit(self):
         self.fit.fit_abort=True
         self.fit_stopped=True
-        self.closeFitInfoDlg()
         self.reuse_sampler=False
+        if self.fit_method=='emcee':
+            self.emceeConfIntervalWidget.stopSamplingPushButton.clicked.disconnect()
 
-        
     def closeFitInfoDlg(self):
         self.fitInfoDlg.done(0)
+
         
+
     def fitCallback(self,params,iterations,residual,fit_scale):
         # self.fitIterLabel.setText('Iteration=%d,\t Chi-Sqr=%.5e'%(iterations,np.sum(residual**2)))
         # if np.any(self.fit.yfit):
@@ -1426,11 +1432,62 @@ class XModFit(QWidget):
         time_taken=time.time()-self.start_time
         frac=iterations/(self.emcee_walker*self.emcee_steps+self.emcee_walker)
         time_left=time_taken*(self.emcee_walker*self.emcee_steps+self.emcee_walker-iterations)/iterations
-        self.fitIterLabel.setText('Time left (hh:mm:ss): %s'%(time.strftime('%H:%M:%S',time.gmtime(time_left))))
-        self.fitInfoDlg.setWindowTitle('%d%% complete'%(int(frac*100)))
-        self.errProgBar.setValue(iterations)
+        self.emceeConfIntervalWidget.fitIterLabel.setText('Time left (hh:mm:ss): %s'%(time.strftime('%H:%M:%S',time.gmtime(time_left))))
+        self.emceeConfIntervalWidget.progressBar.setValue(iterations)
         QApplication.processEvents()
-        # QApplication.processEvents()
+
+    def perform_post_sampling_tasks(self):
+        self.chain=self.fit.result.chain
+        self.chain_shape=self.chain.shape
+        self.param_chain={}
+        self.emceeConfIntervalWidget.parameterTreeWidget.clear()
+        for i,key in enumerate(self.fit.result.flatchain.keys()):
+            l1=QTreeWidgetItem([key])
+            self.param_chain[key]={}
+            for j in range(self.chain_shape[1]):
+                self.param_chain[key][j]=self.chain[:,j,i]
+                l1_child=QTreeWidgetItem(['%s:chain:%d'%(key,j)])
+                l1.addChild(l1_child)
+            self.emceeConfIntervalWidget.parameterTreeWidget.addTopLevelItem(l1)
+        self.emceeConfIntervalWidget.parameterTreeWidget.itemSelectionChanged.connect(self.parameterTreeSelectionChanged)
+
+        #Plotting Acceptance Ratio
+        ax=self.emceeConfIntervalWidget.acceptFracMPLWidget.fig.add_subplot(1,1,1)
+        ax.plot(self.fit.result.acceptance_fraction,'-')
+        ax.set_xlabel('Walkers')
+        ax.set_ylabel('Acceptance Ratio')
+        self.emceeConfIntervalWidget.acceptFracMPLWidget.draw()
+
+        #     ax=self.emceeConfIntervalWidget.chainMPLWidget.fig.add_subplot(NRows,1,i+1)
+        #     ax.plot(self.fit.result.flatchain[key],'-')
+        # self.emceeConfIntervalWidget.chainMPLWidget.draw()
+
+    def parameterTreeSelectionChanged(self):
+        self.emceeConfIntervalWidget.chainMPLWidget.clear()
+        chaindata={}
+        for item in self.emceeConfIntervalWidget.parameterTreeWidget.selectedItems():
+            key,i=item.text(0).split(':chain:')
+            try:
+                chaindata[key].append(int(i))
+            except:
+                chaindata[key]=[int(i)]
+        NRows = len(chaindata.keys())
+        ax={}
+        firstkey=list(chaindata.keys())[0]
+        for j,key in enumerate(chaindata.keys()):
+            try:
+                ax[key]=self.emceeConfIntervalWidget.chainMPLWidget.fig.add_subplot(NRows, 1, j+1, sharex=ax[firstkey])
+            except:
+                ax[key] = self.emceeConfIntervalWidget.chainMPLWidget.fig.add_subplot(NRows, 1, j+1)
+            for i in chaindata[key]:
+                ax[key].plot(self.param_chain[key][i],'-')
+            ax[key].set_xlabel('MC steps')
+            ax[key].set_ylabel(key)
+        self.emceeConfIntervalWidget.chainMPLWidget.draw()
+
+
+
+
 
     def fitErrorDialog(self):
         mesg=[['Parameters', 'Value(50%)', 'Left-error(32%)', 'Right-error(68%)']]

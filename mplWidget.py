@@ -17,7 +17,7 @@ class MplWidget(QWidget):
         vertical_layout.addWidget(self.canvas)
         vertical_layout.addWidget(self.navi_toolbar)
 
-        self.canvas.axes = self.canvas.figure.add_subplot(111)
+        # self.canvas.axes = self.canvas.figure.add_subplot(111)
         self.setLayout(vertical_layout)
 
     def getFigure(self):
@@ -25,3 +25,6 @@ class MplWidget(QWidget):
 
     def draw(self):
         self.canvas.draw()
+
+    def clear(self):
+        self.fig.clf()
