@@ -19,12 +19,64 @@
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <layout class="QGridLayout" name="gridLayout">
-       <item row="14" column="0" colspan="2">
-        <widget class="QPushButton" name="calcConfIntervPushButton">
+       <item row="7" column="0" colspan="2">
+        <widget class="QLabel" name="fitIterLabel">
          <property name="text">
-          <string>Calculate Confidence Interval</string>
+          <string/>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>MCMC Thin</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="MCMCWalkerLineEdit">
+         <property name="text">
+          <string>10</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="MCMCStepsLineEdit">
+         <property name="text">
+          <string>100</string>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="0">
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>Parameter Chains</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0" colspan="2">
+        <widget class="QProgressBar" name="progressBar">
+         <property name="value">
+          <number>24</number>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="MCMCThinLineEdit">
+         <property name="text">
+          <string>1</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLineEdit" name="ParallelCoresLineEdit">
+         <property name="text">
+          <string>1</string>
          </property>
         </widget>
        </item>
@@ -35,10 +87,60 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
-        <widget class="QLineEdit" name="MCMCThinLineEdit">
+       <item row="15" column="0" colspan="2">
+        <widget class="QPushButton" name="calcConfIntervPushButton">
          <property name="text">
-          <string>1</string>
+          <string>Calculate Confidence Interval</string>
+         </property>
+        </widget>
+       </item>
+       <item row="12" column="0" colspan="2">
+        <widget class="QTreeWidget" name="parameterTreeWidget">
+         <property name="selectionMode">
+          <enum>QAbstractItemView::ExtendedSelection</enum>
+         </property>
+         <column>
+          <property name="text">
+           <string>Parameters</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+       <item row="10" column="1">
+        <widget class="QPushButton" name="startSamplingPushButton">
+         <property name="text">
+          <string>Start Sampling</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0" colspan="2">
+        <widget class="QCheckBox" name="reuseSamplerCheckBox">
+         <property name="text">
+          <string>Re-use Sampler</string>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="0">
+        <widget class="QPushButton" name="stopSamplingPushButton">
+         <property name="text">
+          <string>Stop Sampling</string>
+         </property>
+        </widget>
+       </item>
+       <item row="14" column="1">
+        <widget class="QDoubleSpinBox" name="percentileDoubleSpinBox">
+         <property name="decimals">
+          <number>3</number>
+         </property>
+         <property name="value">
+          <double>84.135000000000005</double>
+         </property>
+        </widget>
+       </item>
+       <item row="14" column="0">
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>Percentile</string>
          </property>
         </widget>
        </item>
@@ -56,119 +158,17 @@
          </property>
         </widget>
        </item>
-       <item row="10" column="1">
-        <widget class="QPushButton" name="startSamplingPushButton">
-         <property name="text">
-          <string>Start Sampling</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QLineEdit" name="ParallelCoresLineEdit">
-         <property name="text">
-          <string>1</string>
-         </property>
-        </widget>
-       </item>
        <item row="13" column="0">
-        <widget class="QLabel" name="label_6">
-         <property name="text">
-          <string>Percentile</string>
-         </property>
-        </widget>
-       </item>
-       <item row="13" column="1">
-        <widget class="QDoubleSpinBox" name="percentileDoubleSpinBox">
-         <property name="decimals">
-          <number>3</number>
-         </property>
-         <property name="value">
-          <double>84.135000000000005</double>
-         </property>
-        </widget>
-       </item>
-       <item row="12" column="0" colspan="2">
-        <widget class="QTreeWidget" name="parameterTreeWidget">
-         <property name="selectionMode">
-          <enum>QAbstractItemView::ExtendedSelection</enum>
-         </property>
-         <column>
-          <property name="text">
-           <string>Parameters</string>
-          </property>
-         </column>
-        </widget>
-       </item>
-       <item row="10" column="0">
-        <widget class="QPushButton" name="stopSamplingPushButton">
-         <property name="text">
-          <string>Stop Sampling</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0" colspan="2">
-        <widget class="QCheckBox" name="reuseSamplerCheckBox">
-         <property name="text">
-          <string>Re-use Sampler</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_5">
-         <property name="text">
-          <string>MCMC Thin</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLineEdit" name="MCMCStepsLineEdit">
-         <property name="text">
-          <string>100</string>
-         </property>
-        </widget>
-       </item>
-       <item row="8" column="0" colspan="2">
-        <widget class="QProgressBar" name="progressBar">
-         <property name="value">
-          <number>24</number>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLineEdit" name="MCMCWalkerLineEdit">
-         <property name="text">
-          <string>10</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QLineEdit" name="MCMCBurnLineEdit">
-         <property name="text">
-          <string>10</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
         <widget class="QLabel" name="label_3">
          <property name="text">
           <string>MCMC Burn</string>
          </property>
         </widget>
        </item>
-       <item row="7" column="0" colspan="2">
-        <widget class="QLabel" name="fitIterLabel">
+       <item row="13" column="1">
+        <widget class="QLineEdit" name="MCMCBurnLineEdit">
          <property name="text">
-          <string/>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="11" column="0">
-        <widget class="QLabel" name="label_7">
-         <property name="text">
-          <string>Parameter Chains</string>
+          <string>10</string>
          </property>
         </widget>
        </item>
@@ -176,7 +176,7 @@
      </widget>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>2</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="chainTab">
        <attribute name="title">

@@ -36,6 +36,8 @@ from scipy.stats import chi2
 from scipy.interpolate import interp1d
 import math
 from mplWidget import MplWidget
+import statsmodels.api as sm
+
 
 
 class minMaxDialog(QDialog):
@@ -241,7 +243,7 @@ class XModFit(QWidget):
 
         self.emcee_walker = 100
         self.emcee_steps = 100
-        self.emcee_burn = 30
+        self.emcee_burn = 0
         self.emcee_thin = 1
         self.emcee_cores = 1
         self.emcee_frac = self.emcee_burn/self.emcee_steps
@@ -656,7 +658,7 @@ class XModFit(QWidget):
         self.fitLayoutWidget.nextRow()
         self.showConfIntervalButton = QPushButton('Show Param Error')
         self.showConfIntervalButton.setDisabled(True)
-        self.showConfIntervalButton.clicked.connect(self.fitErrorDialog)
+        self.showConfIntervalButton.clicked.connect(self.confInterval_emcee)
         self.calcConfInterButton = QPushButton('Calculate Param Error')
         self.calcConfInterButton.clicked.connect(self.calcConfInterval)
         self.calcConfInterButton.setDisabled(True)
@@ -824,7 +826,7 @@ class XModFit(QWidget):
             self.oldParams=copy.copy(self.fit.params)
             self.fit_stopped=False
             if self.fit.params['__mpar__']!={}:
-                self.oldmpar=copy.copy(self.mfitParamData)
+                self.oldmpar=copy.deepcopy(self.mfitParamData)
             try:
                 self.showFitInfoDlg(emcee_walker=emcee_walker,emcee_steps=emcee_steps, emcee_burn = emcee_burn)
                 self.runFit(emcee_walker=emcee_walker, emcee_steps=emcee_steps, emcee_burn=emcee_burn,
@@ -839,7 +841,7 @@ class XModFit(QWidget):
                 self.closeFitInfoDlg()
                 if self.fit_method != 'emcee':
                     self.errorAvailable=False
-                    self.emcee_burn=50
+                    self.emcee_burn=0
                     self.emcee_steps=100
                     self.emcee_frac=self.emcee_burn/self.emcee_steps
                     self.showConfIntervalButton.setDisabled(True)
@@ -921,6 +923,9 @@ class XModFit(QWidget):
                     self.reuse_sampler=False
                 else:
                     self.errorAvailable = True
+                    self.reuse_sampler = True
+                    self.emceeConfIntervalWidget.reuseSamplerCheckBox.setEnabled(True)
+                    self.emceeConfIntervalWidget.reuseSamplerCheckBox.setCheckState(Qt.Checked)
                     self.fit.functionCalled.disconnect()
                     self.perform_post_sampling_tasks()
                     # self.fitErrorDialog()
@@ -1320,35 +1325,31 @@ class XModFit(QWidget):
             self.emceeConfIntervalWidget.reuseSamplerCheckBox.setChecked(True)
             self.emceeConfIntervalWidget.reuseSamplerCheckBox.setDisabled(True)
 
+        if self.reuse_sampler:
+            self.emceeConfIntervalWidget.reuseSamplerCheckBox.setEnabled(True)
+            self.emceeConfIntervalWidget.reuseSamplerCheckBox.setCheckState(Qt.Checked)
+        else:
+            self.emceeConfIntervalWidget.reuseSamplerCheckBox.setCheckState(Qt.Unchecked)
+
         self.emceeConfIntervalWidget.startSamplingPushButton.clicked.connect(self.start_emcee_sampling)
         self.emceeConfIntervalWidget.progressBar.setValue(0)
-        # multiInputDlg=MultiInputDialog(inputs={'MCMC Walker':self.emcee_walker,'MCMC Steps':self.emcee_steps, 'MCMC Burn':self.emcee_burn,
-        #                                        'Parallel Cores':self.emcee_cores,'Re-use Sampler':self.reuse_sampler},parent=self)
-        # if not self.errorAvailable:
-        #     multiInputDlg.inputFields['Re-use Sampler'].setChecked(False)
-        #     multiInputDlg.inputFields['Re-use Sampler'].setDisabled(True)
-        #     self.reuse_sampler=False
-        # else:
-        #     multiInputDlg.inputFields['Re-use Sampler'].setEnabled(True)
-        #     multiInputDlg.inputFields['Re-use Sampler'].setChecked(True)
-        # # multiInputDlg.show()
         self.emceeConfIntervalWidget.showMaximized()
-        # if multiInputDlg.exec_():
-        #     self.emcee_walker = int(multiInputDlg.inputs['MCMC Walker'])
-        #     self.emcee_steps = int(multiInputDlg.inputs['MCMC Steps'])
-        #     self.emcee_burn = int(multiInputDlg.inputs['MCMC Burn'])
-        #     self.emcee_cores = int(multiInputDlg.inputs['Parallel Cores'])
-        #     self.reuse_sampler = multiInputDlg.inputs['Re-use Sampler']
-        #     if not self.errorAvailable:
-        #         self.emcee_frac=self.emcee_burn/self.emcee_steps
-        #     self.doFit(fit_method='emcee', emcee_walker=self.emcee_walker, emcee_steps=self.emcee_steps,
-        #                emcee_cores=self.emcee_cores, reuse_sampler=self.reuse_sampler, emcee_burn=self.emcee_burn)
+        if self.errorAvailable:
+            self.update_emcee_parameters()
+            self.perform_post_sampling_tasks()
+            self.cornerPlot()
+            self.emceeConfIntervalWidget.tabWidget.setCurrentIndex=(4)
+
 
     def update_emcee_parameters(self):
         self.emcee_walker=int(self.emceeConfIntervalWidget.MCMCWalkerLineEdit.text())
         self.emcee_steps=int(self.emceeConfIntervalWidget.MCMCStepsLineEdit.text())
         self.emcee_burn=int(self.emceeConfIntervalWidget.MCMCBurnLineEdit.text())
         self.emcee_thin = int(self.emceeConfIntervalWidget.MCMCThinLineEdit.text())
+        if self.emceeConfIntervalWidget.reuseSamplerCheckBox.isChecked():
+            self.reuse_sampler=True
+        else:
+            self.reuse_sampler=False
         self.emcee_cores = int(self.emceeConfIntervalWidget.ParallelCoresLineEdit.text())
 
     def start_emcee_sampling(self):
@@ -1451,16 +1452,67 @@ class XModFit(QWidget):
             self.emceeConfIntervalWidget.parameterTreeWidget.addTopLevelItem(l1)
         self.emceeConfIntervalWidget.parameterTreeWidget.itemSelectionChanged.connect(self.parameterTreeSelectionChanged)
 
+        #Calculating autocorrelation
+        acor={}
+        Nrows=len(self.param_chain.keys())
+        self.emceeConfIntervalWidget.correlationMPLWidget.clear()
+        ax1 = self.emceeConfIntervalWidget.correlationMPLWidget.fig.add_subplot(1, 1, 1)
+        for i,key in enumerate(self.param_chain.keys()):
+            tcor=[]
+            for ikey in self.param_chain[key].keys():
+                tdata=self.param_chain[key][ikey]
+                res=sm.tsa.acf(tdata,nlags=len(tdata),fft=True)
+                tcor.append(res)
+            tcor=np.array(tcor)
+            acor[key]=np.mean(tcor,axis=0)
+            ax1.plot(acor[key],'-',label='para=%s'%key)
+        ax1.set_xlabel('Steps')
+        ax1.set_ylabel('Autocorrelation')
+        l=ax1.legend(loc='best')
+        l.set_draggable(True)
+        self.emceeConfIntervalWidget.correlationMPLWidget.draw()
+
         #Plotting Acceptance Ratio
-        ax=self.emceeConfIntervalWidget.acceptFracMPLWidget.fig.add_subplot(1,1,1)
-        ax.plot(self.fit.result.acceptance_fraction,'-')
-        ax.set_xlabel('Walkers')
-        ax.set_ylabel('Acceptance Ratio')
+        self.emceeConfIntervalWidget.acceptFracMPLWidget.clear()
+        ax2=self.emceeConfIntervalWidget.acceptFracMPLWidget.fig.add_subplot(1,1,1)
+        ax2.plot(self.fit.result.acceptance_fraction,'-')
+        ax2.set_xlabel('Walkers')
+        ax2.set_ylabel('Acceptance Ratio')
         self.emceeConfIntervalWidget.acceptFracMPLWidget.draw()
 
-        #     ax=self.emceeConfIntervalWidget.chainMPLWidget.fig.add_subplot(NRows,1,i+1)
-        #     ax.plot(self.fit.result.flatchain[key],'-')
-        # self.emceeConfIntervalWidget.chainMPLWidget.draw()
+        #Corner plots
+        self.emceeConfIntervalWidget.calcConfIntervPushButton.clicked.connect(self.cornerPlot)
+
+
+    def cornerPlot(self):
+        percentile = self.emceeConfIntervalWidget.percentileDoubleSpinBox.value()
+        self.emceeConfIntervalWidget.cornerPlotMPLWidget.clear()
+        names = [name for name in self.fit.result.var_names if name != '__lnsigma']
+        values = [self.fit.result.params[name].value for name in names]
+        ndim = len(names)
+        quantiles=[1.0-percentile/100,0.5,percentile/100]
+        corner.corner(self.fit.result.flatchain[names], labels=names, bins=50, levels=(percentile/100,),
+                      truths=values, quantiles=quantiles, show_titles=True, title_fmt='.6f',
+                      use_math_text=True, title_kwargs={'fontsize': 3 * 12 / ndim},
+                      label_kwargs={'fontsize': 3 * 12 / ndim}, fig=self.emceeConfIntervalWidget.cornerPlotMPLWidget.fig)
+        for ax3 in self.emceeConfIntervalWidget.cornerPlotMPLWidget.fig.get_axes():
+            ax3.set_xlabel('')
+            ax3.set_ylabel('')
+            ax3.tick_params(axis='y', labelsize=3 * 12 / ndim, rotation=0)
+            ax3.tick_params(axis='x', labelsize=3 * 12 / ndim)
+        self.emceeConfIntervalWidget.cornerPlotMPLWidget.draw()
+        err_quantiles={}
+        mesg = [['Parameters', 'Value(50%)', 'Left-error(%.3f)'%(100-percentile), 'Right-error(%.3f)'%percentile]]
+        for name in names:
+            err_quantiles[name] = corner.quantile(self.fit.result.flatchain[name], quantiles)
+            l,p,r=err_quantiles[name]
+            mesg.append([name, p, l - p, r - p])
+
+        self.emceeConfIntervalWidget.confIntervalTextEdit.clear()
+        self.emceeConfIntervalWidget.confIntervalTextEdit.setFont(QFont("Courier", 10))
+        txt = tabulate(mesg, headers='firstrow', stralign='left', numalign='left', tablefmt='simple')
+        self.emceeConfIntervalWidget.confIntervalTextEdit.append(txt)
+
 
     def parameterTreeSelectionChanged(self):
         self.emceeConfIntervalWidget.chainMPLWidget.clear()
@@ -1488,74 +1540,6 @@ class XModFit(QWidget):
 
 
 
-
-    def fitErrorDialog(self):
-        mesg=[['Parameters', 'Value(50%)', 'Left-error(32%)', 'Right-error(68%)']]
-        for key in self.fit.emcee_params.keys():
-            if self.fit.emcee_params[key].vary:
-                l,p,r = np.percentile(self.fit.result.flatchain[key], [32, 50, 68])
-                mesg.append([key, p, l-p, r-p])
-        names=[name for name in self.fit.result.var_names if name!='__lnsigma']
-        values=[self.fit.result.params[name].value for name in names]
-        # fig = corner.corner(self.fit.result.flatchain[names], labels=names, bins=50,
-        #                     truths = values, quantiles = [0.159, 0.5, 0.842], show_titles = True, title_fmt='.3f',
-        #                     use_math_text=True,title_kwargs={'fontsize':12},label_kwargs={'fontsize':12})
-        # for ax in fig.get_axes():
-        #     ax.set_xlabel('')
-            # ax.set_ylabel('')
-        dlg=QDialog(self)
-        dlg.setWindowTitle('Error Estimates')
-        dlg.resize(800, 600)
-        vblayout = QVBoxLayout(dlg)
-        splitter=QSplitter(Qt.Vertical)
-        plotWidget=QWidget()
-        clabel = QLabel('Parameter Correlations')
-        ndim=len(names)
-        canvas=FigureCanvas(Figure(figsize=(ndim*3,ndim*3)))#,subplotpars={'wspace':0,'hspace':0}))
-        toolbar=NavigationToolbar(canvas, self)
-        playout=QVBoxLayout()
-        playout.addWidget(clabel)
-        playout.addWidget(canvas)
-        playout.addWidget(toolbar)
-        plotWidget.setLayout(playout)
-        splitter.addWidget(plotWidget)
-        corner.corner(self.fit.result.flatchain[names], labels=names, bins=50,levels=(0.68,),
-                      truths=values, quantiles=[0.32, 0.5, 0.68], show_titles=True, title_fmt='.6f',
-                      use_math_text=True, title_kwargs={'fontsize': 3*12/ndim}, label_kwargs={'fontsize': 3*12/ndim},fig=canvas.figure)
-        for ax in canvas.figure.get_axes():
-            ax.set_xlabel('')
-            ax.set_ylabel('')
-            ax.tick_params(axis='y',labelsize=3*12/ndim,rotation=0)
-            ax.tick_params(axis='x', labelsize=3*12/ndim)
-        canvas.draw()
-        statWidget=QWidget()
-        slayout=QVBoxLayout()
-        label = QLabel('Error Estimates of the parameters')
-        slayout.addWidget(label)
-        textEdit = QTextEdit()
-        ar=self.fit.result.acceptance_fraction
-        textEdit.append('Acceptance Fraction (min: mean: max):%.3f : %.3f : %.3f'%(np.min(ar), np.mean(ar), np.max(ar)))
-        textEdit.setFont(QFont("Courier",10))
-        txt=tabulate(mesg,headers='firstrow',stralign='left',numalign='left',tablefmt='simple')
-        textEdit.append(txt)
-        slayout.addWidget(textEdit)
-        saveWidget=QWidget()
-        hlayout=QHBoxLayout()
-        savePushButton=QPushButton('Save Parameters')
-        savePushButton.clicked.connect(lambda x: self.saveParameterError(text=txt))
-        hlayout.addWidget(savePushButton)
-        closePushButton=QPushButton('Close')
-        closePushButton.clicked.connect(dlg.accept)
-        hlayout.addWidget(closePushButton)
-        saveWidget.setLayout(hlayout)
-        slayout.addWidget(saveWidget)
-        statWidget.setLayout(slayout)
-        splitter.addWidget(statWidget)
-        vblayout.addWidget(splitter)
-        dlg.setWindowTitle('Parameter Errors')
-        dlg.setModal(True)
-        dlg.showMaximized()
-        # QMessageBox.information(self, 'Parameter Errors', tabulate(mesg, headers='firstrow',stralign='right',numalign='right',tablefmt='rst'), QMessageBox.Ok)
 
     def saveParameterError(self, text=''):
         fname=QFileDialog.getSaveFileName(caption='Save Parameter Errors as',filter='Parameter Error files (*.perr)',directory=self.curDir)[0]
