@@ -1332,6 +1332,7 @@ class XModFit(QWidget):
             self.emceeConfIntervalWidget.reuseSamplerCheckBox.setCheckState(Qt.Unchecked)
 
         self.emceeConfIntervalWidget.startSamplingPushButton.clicked.connect(self.start_emcee_sampling)
+        self.emceeConfIntervalWidget.MCMCWalkerLineEdit.returnPressed.connect(self.MCMCWalker_changed)
         self.emceeConfIntervalWidget.progressBar.setValue(0)
         self.emceeConfIntervalWidget.showMaximized()
         if self.errorAvailable:
@@ -1339,6 +1340,10 @@ class XModFit(QWidget):
             self.perform_post_sampling_tasks()
             self.cornerPlot()
             self.emceeConfIntervalWidget.tabWidget.setCurrentIndex=(4)
+
+    def MCMCWalker_changed(self):
+        self.emceeConfIntervalWidget.reuseSamplerCheckBox.setCheckState(Qt.Unchecked)
+        self.update_emcee_parameters()
 
 
     def update_emcee_parameters(self):
@@ -1353,11 +1358,20 @@ class XModFit(QWidget):
         self.emcee_cores = int(self.emceeConfIntervalWidget.ParallelCoresLineEdit.text())
 
     def start_emcee_sampling(self):
+        try:
+            self.emceeConfIntervalWidget.parameterTreeWidget.itemSelectionChanged.disconnect()
+        except:
+            pass
+        self.emceeConfIntervalWidget.parameterTreeWidget.clear()
+        self.emceeConfIntervalWidget.chainMPLWidget.clear()
+        self.emceeConfIntervalWidget.correlationMPLWidget.clear()
+        self.emceeConfIntervalWidget.cornerPlotMPLWidget.clear()
+        self.emceeConfIntervalWidget.confIntervalTextEdit.clear()
         self.update_emcee_parameters()
         if not self.errorAvailable:
             self.emcee_frac=self.emcee_burn/self.emcee_steps
         self.doFit(fit_method='emcee', emcee_walker=self.emcee_walker, emcee_steps=self.emcee_steps,
-                       emcee_cores=self.emcee_cores, reuse_sampler=self.reuse_sampler, emcee_burn=self.emcee_burn)
+                       emcee_cores=self.emcee_cores, reuse_sampler=self.reuse_sampler, emcee_burn=0)
 
 
     def conf_interv_status(self,params,iterations,residual,fit_scale):
@@ -1438,10 +1452,11 @@ class XModFit(QWidget):
         QApplication.processEvents()
 
     def perform_post_sampling_tasks(self):
+        self.emceeConfIntervalWidget.progressBar.setValue(self.emcee_walker*self.emcee_steps)
+        self.emceeConfIntervalWidget.fitIterLabel.setText('Time left (hh:mm:ss): 00:00:00' )
         self.chain=self.fit.result.chain
         self.chain_shape=self.chain.shape
         self.param_chain={}
-        self.emceeConfIntervalWidget.parameterTreeWidget.clear()
         for i,key in enumerate(self.fit.result.flatchain.keys()):
             l1=QTreeWidgetItem([key])
             self.param_chain[key]={}
@@ -1457,6 +1472,7 @@ class XModFit(QWidget):
         Nrows=len(self.param_chain.keys())
         self.emceeConfIntervalWidget.correlationMPLWidget.clear()
         ax1 = self.emceeConfIntervalWidget.correlationMPLWidget.fig.add_subplot(1, 1, 1)
+        corr_time=[]
         for i,key in enumerate(self.param_chain.keys()):
             tcor=[]
             for ikey in self.param_chain[key].keys():
@@ -1466,11 +1482,17 @@ class XModFit(QWidget):
             tcor=np.array(tcor)
             acor[key]=np.mean(tcor,axis=0)
             ax1.plot(acor[key],'-',label='para=%s'%key)
+            corr_time.append([key,np.sum(np.where(acor[key]>0,acor[key],0))])
         ax1.set_xlabel('Steps')
         ax1.set_ylabel('Autocorrelation')
         l=ax1.legend(loc='best')
         l.set_draggable(True)
         self.emceeConfIntervalWidget.correlationMPLWidget.draw()
+        self.emceeConfIntervalWidget.corrTimeTextEdit.clear()
+        self.emceeConfIntervalWidget.corrTimeTextEdit.setFont(QFont("Courier", 10))
+        corr_text = tabulate(corr_time, headers=['Parameter', 'Correlation-time (Steps)'], stralign='left',
+                             numalign='left', tablefmt='simple')
+        self.emceeConfIntervalWidget.corrTimeTextEdit.append(corr_text)
 
         #Plotting Acceptance Ratio
         self.emceeConfIntervalWidget.acceptFracMPLWidget.clear()
@@ -1480,8 +1502,9 @@ class XModFit(QWidget):
         ax2.set_ylabel('Acceptance Ratio')
         self.emceeConfIntervalWidget.acceptFracMPLWidget.draw()
 
-        #Corner plots
         self.emceeConfIntervalWidget.calcConfIntervPushButton.clicked.connect(self.cornerPlot)
+        self.emceeConfIntervalWidget.tabWidget.setCurrentIndex(1)
+
 
 
     def cornerPlot(self):
@@ -1491,7 +1514,8 @@ class XModFit(QWidget):
         values = [self.fit.result.params[name].value for name in names]
         ndim = len(names)
         quantiles=[1.0-percentile/100,0.5,percentile/100]
-        corner.corner(self.fit.result.flatchain[names], labels=names, bins=50, levels=(percentile/100,),
+        first=int(self.emceeConfIntervalWidget.MCMCBurnLineEdit.text())
+        corner.corner(self.fit.result.flatchain[names][first:], labels=names, bins=50, levels=(percentile/100,),
                       truths=values, quantiles=quantiles, show_titles=True, title_fmt='.6f',
                       use_math_text=True, title_kwargs={'fontsize': 3 * 12 / ndim},
                       label_kwargs={'fontsize': 3 * 12 / ndim}, fig=self.emceeConfIntervalWidget.cornerPlotMPLWidget.fig)
@@ -1501,6 +1525,7 @@ class XModFit(QWidget):
             ax3.tick_params(axis='y', labelsize=3 * 12 / ndim, rotation=0)
             ax3.tick_params(axis='x', labelsize=3 * 12 / ndim)
         self.emceeConfIntervalWidget.cornerPlotMPLWidget.draw()
+        self.emceeConfIntervalWidget.tabWidget.setCurrentIndex(3)
         err_quantiles={}
         mesg = [['Parameters', 'Value(50%)', 'Left-error(%.3f)'%(100-percentile), 'Right-error(%.3f)'%percentile]]
         for name in names:
@@ -1536,6 +1561,7 @@ class XModFit(QWidget):
             ax[key].set_xlabel('MC steps')
             ax[key].set_ylabel(key)
         self.emceeConfIntervalWidget.chainMPLWidget.draw()
+        self.emceeConfIntervalWidget.tabWidget.setCurrentIndex(0)
 
 
 
