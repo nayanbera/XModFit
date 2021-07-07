@@ -1658,6 +1658,7 @@ class XModFit(QWidget):
         self.errorAvailable = False
         self.reuse_sampler = False
         self.calcConfInterButton.setDisabled(True)
+
                 
         
     def removeData(self):

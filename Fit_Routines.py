@@ -153,8 +153,15 @@ class Fit(QObject):
         elif fit_method == 'emcee':
             if not reuse_sampler:
                 self.emcee_params = self.result.params.copy()
-                self.emcee_params.add('__lnsigma', value=-1.0,vary=True, min=np.log(0.001), max=np.log(2.0))
-                self.fitter = Minimizer(self.residual, self.emcee_params, fcn_args=(fit_scale,), iter_cb=self.callback,
+                if 'w/o' in fit_scale:
+                    self.emcee_params.add('__lnsigma', value=-1.0,vary=True, min=np.log(0.001), max=np.log(2.0))
+                    self.fitter = Minimizer(self.residual, self.emcee_params, fcn_args=(fit_scale,),
+                                            iter_cb=self.callback,
+                                            nan_policy='raise', burn=emcee_burn, steps=emcee_steps, thin=1,
+                                            is_weighted=False,
+                                            nwalkers=emcee_walker, workers=emcee_cores, reuse_sampler=reuse_sampler)
+                else:
+                    self.fitter = Minimizer(self.residual, self.emcee_params, fcn_args=(fit_scale,), iter_cb=self.callback,
                                     nan_policy='raise', burn=emcee_burn, steps=emcee_steps, thin=1, is_weighted=True,
                                         nwalkers=emcee_walker, workers=emcee_cores, reuse_sampler=reuse_sampler)
         else:
