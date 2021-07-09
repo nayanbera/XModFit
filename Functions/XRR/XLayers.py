@@ -55,10 +55,10 @@ class XLayers: #Please put the class name same as the function name
         bkg     : In-coherrent background
         mpar  	: Dictionary of Phases where,
                   Layers: Layer description,
-                  d: thickness of each layer,
-                  rho:Electron density of each layer,
+                  d: thickness of each layer in Angstroms,
+                  rho:Electron density of each layer in el/inv-Angstroms,
                   mu: Absorption coefficient of each layer in inv-cms,
-                  sig: roughness of interface separating each layer.
+                  sig: roughness of interface separating each layer in Angstroms.
                   The upper and lower thickness should be always  fixed. The roughness of the topmost layer should be always kept 0.
         """
         if type(x) == list:
