@@ -957,6 +957,7 @@ class XModFit(QWidget):
 
 
     def confInterval_ChiSqrDist(self):
+        self.fit_method = self.fitMethods[self.fitMethodComboBox.currentText()]
         self.confIntervalWidget=QWidget()
         self.confIntervalWidget.setWindowTitle("Confidence Interval Calculator")
         self.confIntervalWidget.setWindowModality(Qt.ApplicationModal)
@@ -1257,10 +1258,6 @@ class XModFit(QWidget):
                         ax.set_title('%.3e$^{%.3e}_{%.3e}$'%(self.min_value[pkey[i-1]], right_error,left_error))
                         ax.set_xlabel(pkey[i-1])
                         ax.set_ylabel('\u03c7$^2$')
-                        # print(i,'happy')
-                    # else:
-                    #     ax.axis('off')
-                    #     print(i,'sad')
                     i+=1
             mw.getFigure().tight_layout()
             mw.draw()
@@ -1300,6 +1297,7 @@ class XModFit(QWidget):
     def confInterval_emcee(self):
         """
         """
+        self.fit_method = self.fitMethods[self.fitMethodComboBox.currentText()]
         if not self.errorAvailable:
              self.emcee_walker=(self.fit.result.nvarys+1)*5
         else:
