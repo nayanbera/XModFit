@@ -33,5 +33,5 @@ Follow the following instructions for installation:
 
 4) Run the command to run **XModFit**::
 
-            python XModFit.py
+            python xmodfit.py
 
