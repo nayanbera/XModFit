@@ -221,7 +221,7 @@ class XModFit(QWidget):
     
     :class:`Fit_Widget` can be used as stand-alone python fitting package by running it in terminal as::
     
-        $python XModFit.py
+        $python xmodfit.py
         
     .. figure:: Figures/Fit_widget.png
        :figwidth: 100%
