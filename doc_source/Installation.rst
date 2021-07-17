@@ -8,7 +8,7 @@ Follow the following instructions for installation:
 2) Open a Anaconda terminal the run these two commands::
 
     conda install pyqt pyqtgraph sqlalchemy scipy six matplotlib pandas
-    pip install lmfit pyfai pylint periodictable mendeleev corner emcee tabulate xraydb
+    pip install lmfit pylint periodictable mendeleev corner emcee tabulate xraydb python-docx
 
 3) The installation can be done in two different ways:
 
@@ -33,5 +33,5 @@ Follow the following instructions for installation:
 
 4) Run the command to run **XModFit**::
 
-            python XModFit.py
+            python xmodfit.py
 
