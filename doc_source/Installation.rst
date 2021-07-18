@@ -7,8 +7,7 @@ Follow the following instructions for installation:
 1) Install Anaconda python (Python 3.8 and higher) for your operating system from `Anaconda website <https://www.anaconda.com/products/individual>`_
 2) Open a Anaconda terminal the run these two commands::
 
-    conda install pyqt pyqtgraph sqlalchemy scipy six matplotlib pandas
-    pip install lmfit pylint periodictable mendeleev corner emcee tabulate xraydb python-docx
+    pip install PyQt5 pyqtgraph sqlalchemy scipy six matplotlib pandas lmfit pylint periodictable mendeleev corner emcee tabulate xraydb python-docx numba numba-numpy
 
 3) The installation can be done in two different ways:
 
