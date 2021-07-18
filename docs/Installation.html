@@ -4,15 +4,16 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Installation &#8212; XModFit 0.0.1 documentation</title>
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Brief Tutorial" href="Brief_Tutorial.html" />
@@ -33,14 +34,13 @@
 
           <div class="body" role="main">
             
-  <section id="installation">
+  <div class="section" id="installation">
 <span id="id1"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
 <p>Follow the following instructions for installation:</p>
 <ol class="arabic">
 <li><p>Install Anaconda python (Python 3.8 and higher) for your operating system from <a class="reference external" href="https://www.anaconda.com/products/individual">Anaconda website</a></p></li>
 <li><p>Open a Anaconda terminal the run these two commands:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">install</span> <span class="n">pyqt</span> <span class="n">pyqtgraph</span> <span class="n">sqlalchemy</span> <span class="n">scipy</span> <span class="n">six</span> <span class="n">matplotlib</span> <span class="n">pandas</span>
-<span class="n">pip</span> <span class="n">install</span> <span class="n">lmfit</span> <span class="n">pyfai</span> <span class="n">pylint</span> <span class="n">periodictable</span> <span class="n">mendeleev</span> <span class="n">corner</span> <span class="n">emcee</span> <span class="n">tabulate</span> <span class="n">xraydb</span> <span class="n">python</span><span class="o">-</span><span class="n">docx</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">PyQt5</span> <span class="n">pyqtgraph</span> <span class="n">sqlalchemy</span> <span class="n">scipy</span> <span class="n">six</span> <span class="n">matplotlib</span> <span class="n">pandas</span> <span class="n">lmfit</span> <span class="n">pylint</span> <span class="n">periodictable</span> <span class="n">mendeleev</span> <span class="n">corner</span> <span class="n">emcee</span> <span class="n">tabulate</span> <span class="n">xraydb</span> <span class="n">python</span><span class="o">-</span><span class="n">docx</span> <span class="n">numba</span> <span class="n">numba</span><span class="o">-</span><span class="n">numpy</span>
 </pre></div>
 </div>
 </li>
@@ -76,12 +76,12 @@
 </div></blockquote>
 </li>
 <li><p>Run the command to run <strong>XModFit</strong>:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">XModFit</span><span class="o">.</span><span class="n">py</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">xmodfit</span><span class="o">.</span><span class="n">py</span>
 </pre></div>
 </div>
 </li>
 </ol>
-</section>
+</div>
 
 
           </div>
@@ -100,7 +100,7 @@
 
 
 <h3>Navigation</h3>
-<p><span class="caption-text">Contents:</span></p>
+<p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="Introduction.html">Introduction</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a></li>
@@ -143,7 +143,7 @@
       &copy;2021, Mrinal Bera, Wei Bu.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
